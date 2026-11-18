@@ -1,0 +1,1971 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>주거 공간의 효율적 활용 - 공간 메이커 게임</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Noto Sans KR', 'Inter', sans-serif;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      background-color: #f1f5f9;
+    }
+    .blueprint-grid {
+      background-color: #f8fafc;
+      background-image:
+        linear-gradient(to right, rgba(148, 163, 184, 0.18) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(148, 163, 184, 0.18) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    .selected-ring {
+      outline: 3px solid #f59e0b;
+      outline-offset: 2px;
+      transform: scale(1.03);
+    }
+    .drag-token {
+      touch-action: none;
+      cursor: grab;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .drag-token:active {
+      cursor: grabbing;
+    }
+    @keyframes popIn {
+      0% { transform: scale(0.88); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-pop {
+      animation: popIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-800">
+
+  <!-- 상단 네비게이션 & 점수판 -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-xl shadow-xs">
+          🏠
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-extrabold text-slate-900 leading-tight">
+            공간 메이커 : 주거 공간의 효율적 활용
+          </h1>
+          <p class="text-[11px] sm:text-xs text-slate-500">중학교 기술·가정 인터랙티브 인테리어 실습 게임</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button onclick="openHintModal()" class="px-3 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition">
+          <span>💡</span> <span>교과서 핵심 원리</span>
+        </button>
+        <div class="px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs sm:text-sm font-bold flex items-center gap-2">
+          <span>🏆 <span id="total-score">0</span>점</span>
+          <span class="text-slate-400">|</span>
+          <span class="text-emerald-400" id="progress-badge">0/5 완료</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 스테이지 선택 탭 -->
+    <nav class="max-w-7xl mx-auto px-3 sm:px-6 pb-2.5 overflow-x-auto no-scrollbar">
+      <div class="flex items-center gap-1.5 sm:gap-2 min-w-max">
+        <button id="tab-1" onclick="switchStage(1)" class="stage-tab px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 transition bg-indigo-600 text-white shadow-xs">
+          <span>1️⃣</span> 다목적 활용
+          <span id="badge-1" class="hidden ml-1 text-xs bg-emerald-400 text-slate-900 px-1.5 py-0.5 rounded-full">완료</span>
+        </button>
+        <button id="tab-2" onclick="switchStage(2)" class="stage-tab px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 transition bg-slate-100 text-slate-600 hover:bg-slate-200">
+          <span>2️⃣</span> 입체적 활용 (생애주기)
+          <span id="badge-2" class="hidden ml-1 text-xs bg-emerald-400 text-slate-900 px-1.5 py-0.5 rounded-full">완료</span>
+        </button>
+        <button id="tab-3" onclick="switchStage(3)" class="stage-tab px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 transition bg-slate-100 text-slate-600 hover:bg-slate-200">
+          <span>3️⃣</span> 효율적 가구 배치
+          <span id="badge-3" class="hidden ml-1 text-xs bg-emerald-400 text-slate-900 px-1.5 py-0.5 rounded-full">완료</span>
+        </button>
+        <button id="tab-4" onclick="switchStage(4)" class="stage-tab px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 transition bg-slate-100 text-slate-600 hover:bg-slate-200">
+          <span>4️⃣</span> 정리와 수납
+          <span id="badge-4" class="hidden ml-1 text-xs bg-emerald-400 text-slate-900 px-1.5 py-0.5 rounded-full">완료</span>
+        </button>
+        <button id="tab-5" onclick="switchStage(5)" class="stage-tab px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 transition bg-slate-100 text-slate-600 hover:bg-slate-200">
+          <span>🎓</span> 박사님의 조언 (서술)
+          <span id="badge-5" class="hidden ml-1 text-xs bg-emerald-400 text-slate-900 px-1.5 py-0.5 rounded-full">완료</span>
+        </button>
+        <button id="tab-6" onclick="switchStage(6)" class="stage-tab px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 transition bg-slate-100 text-slate-600 hover:bg-slate-200">
+          <span>🎨</span> 자유 원룸 스튜디오
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- 실시간 안내 피드백 배너 -->
+  <div class="max-w-7xl w-full mx-auto px-3 sm:px-6 pt-3">
+    <div id="feedback-bar" class="rounded-2xl px-4 py-2.5 bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs sm:text-sm font-semibold flex items-center justify-between gap-3 shadow-2xs">
+      <div class="flex items-center gap-2">
+        <span id="feedback-icon" class="text-lg">👋</span>
+        <span id="feedback-text">하단 카탈로그에서 다목적 아이템을 원룸 평면도로 드래그(또는 터치 후 평면도 탭)하여 배치해 보세요!</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 메인 게임 영역 -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-3 flex flex-col gap-3">
+
+    <!-- ===================================================================== -->
+    <!-- STAGE 1: 공간의 다목적 활용 (건축 평면도 원룸 자유 드래그 배치) -->
+    <!-- ===================================================================== -->
+    <section id="stage-1" class="stage-view flex flex-col gap-3">
+      <div class="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <span class="inline-block text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full mb-1">STAGE 1 · 시간·기능에 따른 다목적 공간 활용</span>
+          <h2 class="text-base sm:text-lg font-extrabold text-slate-900">원룸 평면도에 다목적 인테리어 아이템을 배치해 낮과 밤을 모두 해결하세요!</h2>
+          <p class="text-xs sm:text-sm text-slate-600 mt-0.5">
+            좋은 다목적 아이템(접이식·이동식·가변형)을 원룸에 <strong>2개 이상</strong> 배치한 뒤 <strong>[☀️ 낮 / 🌙 밤 전환 테스트]</strong>를 실행해 보세요.
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="s1-time-btn" onclick="toggleS1DayNight()" class="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold text-xs sm:text-sm flex items-center gap-1.5 shadow-xs transition">
+            <span id="s1-time-icon">☀️</span> <span id="s1-time-label">현재: 낮 모드 (공부·거실)</span>
+          </button>
+          <button onclick="rotateSelectedS1()" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm">
+            🔄 회전
+          </button>
+          <button onclick="deleteSelectedS1()" class="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs sm:text-sm">
+            🗑️ 삭제
+          </button>
+          <button onclick="checkStage1Complete()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm shadow-xs">
+            ✅ 다목적 설계 검증
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+        <!-- 원룸 건축 평면도 캔버스 -->
+        <div class="lg:col-span-8 bg-white rounded-2xl p-3 border border-slate-200 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-slate-500">📐 원룸 건축 평면도 (아이템을 드래그해 놓거나 배치 후 끌어서 위치 조절)</span>
+            <span id="s1-mode-badge" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800">☀️ 낮: 학습 및 휴식 모드</span>
+          </div>
+          <div id="s1-canvas-wrapper" class="relative w-full aspect-[16/10] rounded-xl overflow-hidden border-2 border-slate-300 blueprint-grid">
+            <!-- 원룸 SVG 건축 도면 -->
+            <svg viewBox="0 0 800 500" class="w-full h-full pointer-events-none">
+              <rect x="40" y="35" width="720" height="430" fill="#ffffff" stroke="#1e293b" stroke-width="8" />
+              <line x1="510" y1="35" x2="510" y2="235" stroke="#1e293b" stroke-width="6" />
+              <line x1="510" y1="235" x2="620" y2="235" stroke="#1e293b" stroke-width="6" />
+              <line x1="695" y1="235" x2="760" y2="235" stroke="#1e293b" stroke-width="6" />
+              <path d="M 620 235 A 75 75 0 0 1 695 310" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5,5" />
+              <line x1="620" y1="235" x2="620" y2="310" stroke="#475569" stroke-width="3" />
+              <rect x="130" y="29" width="170" height="12" fill="#bae6fd" stroke="#0284c7" stroke-width="2" />
+              <text x="215" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#0369a1">☀️ 대형 채광 창문</text>
+              <rect x="570" y="29" width="110" height="12" fill="#bae6fd" stroke="#0284c7" stroke-width="2" />
+              <text x="625" y="22" text-anchor="middle" font-size="12" font-weight="bold" fill="#0369a1">발코니 창</text>
+              <rect x="580" y="460" width="90" height="10" fill="#ffffff" />
+              <path d="M 580 465 A 85 85 0 0 1 665 380" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5,5" />
+              <line x1="580" y1="465" x2="580" y2="380" stroke="#d97706" stroke-width="4" />
+              <text x="625" y="490" text-anchor="middle" font-size="13" font-weight="bold" fill="#b45309">🚪 현관 출입문</text>
+              <rect x="525" y="55" width="95" height="65" rx="6" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2" />
+              <text x="572" y="92" text-anchor="middle" font-size="12" fill="#64748b" font-weight="bold">욕실·세면</text>
+              <rect x="640" y="55" width="105" height="155" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2" />
+              <text x="692" y="135" text-anchor="middle" font-size="12" fill="#64748b" font-weight="bold">주방·다용도</text>
+              <text x="275" y="255" text-anchor="middle" font-size="16" fill="#cbd5e1" font-weight="800">원룸 메인 생활 공간 (침실 · 거실 · 학습 겸용)</text>
+            </svg>
+            <!-- 낮/밤 오버레이 틴트 -->
+            <div id="s1-night-overlay" class="hidden absolute inset-0 bg-indigo-950/25 pointer-events-none transition-opacity"></div>
+            <!-- 배치된 아이템 컨테이너 -->
+            <div id="s1-placed-layer" class="absolute inset-0"></div>
+          </div>
+        </div>
+
+        <!-- 다목적 인테리어 아이템 카탈로그 (총 9종: 좋은 5종 + 별로인 4종) -->
+        <div class="lg:col-span-4 bg-white rounded-2xl p-3 border border-slate-200 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-extrabold text-slate-800">🛋️ 다목적 인테리어 아이템 (9종)</h3>
+            <span class="text-[11px] text-slate-500">드래그 또는 터치 배치</span>
+          </div>
+          <div id="s1-catalog" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 max-h-[420px] overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- STAGE 2: 공간의 입체적 활용 (생애 주기별 16가지 설계 미션) -->
+    <!-- ===================================================================== -->
+    <section id="stage-2" class="stage-view hidden flex flex-col gap-3">
+      <div class="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <span class="inline-block text-xs font-bold text-purple-600 bg-purple-50 px-2.5 py-0.5 rounded-full mb-1">STAGE 2 · 생애 주기별 입체적 공간 활용 (총 16가지)</span>
+          <h2 class="text-base sm:text-lg font-extrabold text-slate-900">생애 주기(학생·대학생·직장인·부모)에 맞춰 죽은 공간을 입체적으로 설계하세요!</h2>
+          <p class="text-xs sm:text-sm text-slate-600 mt-0.5">
+            각 생애 주기 탭을 선택하고, 4곳의 <strong>죽은 공간(Dead Space)</strong>에 알맞은 입체적 가구를 드래그(또는 터치)해 배치하세요.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 bg-purple-50 px-3.5 py-2 rounded-xl border border-purple-200">
+          <span class="text-xs sm:text-sm font-extrabold text-purple-900">전체 입체 설계 달성률: <span id="s2-total-count">0</span> / 16</span>
+        </div>
+      </div>
+
+      <!-- 생애 주기 4단계 서브 탭 -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <button id="lifecycle-btn-student" onclick="selectLifecycle('student')" class="lifecycle-btn p-3 rounded-2xl border-2 border-purple-600 bg-purple-600 text-white font-extrabold text-xs sm:text-sm flex items-center justify-between shadow-xs transition">
+          <span>🎒 1. 중고등학생</span>
+          <span id="lc-count-student" class="px-2 py-0.5 rounded-full bg-white/20 text-xs">0/4</span>
+        </button>
+        <button id="lifecycle-btn-college" onclick="selectLifecycle('college')" class="lifecycle-btn p-3 rounded-2xl border-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-extrabold text-xs sm:text-sm flex items-center justify-between transition">
+          <span>🎓 2. 대학생 (자취)</span>
+          <span id="lc-count-college" class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs">0/4</span>
+        </button>
+        <button id="lifecycle-btn-worker" onclick="selectLifecycle('worker')" class="lifecycle-btn p-3 rounded-2xl border-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-extrabold text-xs sm:text-sm flex items-center justify-between transition">
+          <span>💼 3. 직장인 (재택)</span>
+          <span id="lc-count-worker" class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs">0/4</span>
+        </button>
+        <button id="lifecycle-btn-parent" onclick="selectLifecycle('parent')" class="lifecycle-btn p-3 rounded-2xl border-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-extrabold text-xs sm:text-sm flex items-center justify-between transition">
+          <span>👨‍👩‍👧‍👦 4. 부모 (가족)</span>
+          <span id="lc-count-parent" class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs">0/4</span>
+        </button>
+      </div>
+
+      <!-- 현재 선택된 생애 주기 상황 설명 -->
+      <div id="s2-scenario-banner" class="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-2xl p-3.5 flex items-center gap-3">
+        <div id="s2-scenario-icon" class="w-12 h-12 rounded-2xl bg-white shadow-xs flex items-center justify-center text-2xl shrink-0">🎒</div>
+        <div>
+          <h3 id="s2-scenario-title" class="text-sm sm:text-base font-extrabold text-purple-950">중고등학생의 방 : 수면과 집중 학습, 학용품 수납을 한 방에!</h3>
+          <p id="s2-scenario-desc" class="text-xs sm:text-sm text-purple-800">좁은 방에서도 답답하지 않도록 침대 아래·벽면·문 뒤·침대 하부 공간을 입체적으로 살려 보세요.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+        <!-- 4개의 죽은 공간(Dead Space) 드롭 존 -->
+        <div id="s2-zones-grid" class="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+
+        <!-- 해당 생애 주기의 입체적 가구 후보 4종 -->
+        <div class="lg:col-span-4 bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm flex flex-col">
+          <h3 class="text-sm font-extrabold text-slate-800 mb-1">🧱 입체적 공간 활용 아이템</h3>
+          <p class="text-xs text-slate-500 mb-3">아이템을 드래그하거나 선택 후 알맞은 죽은 공간을 터치하세요.</p>
+          <div id="s2-items-list" class="flex flex-col gap-2.5"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- STAGE 3: 효율적 가구 배치 (빈 방 기준 도면 vs 오류 찾기 + 드래그 재배치) -->
+    <!-- ===================================================================== -->
+    <section id="stage-3" class="stage-view hidden flex flex-col gap-3">
+      <div class="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <span class="inline-block text-xs font-bold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full mb-1">STAGE 3 · 효율적 가구 배치 원리</span>
+          <h2 class="text-base sm:text-lg font-extrabold text-slate-900">
+            <span id="s3-step-badge" class="inline-block px-2 py-0.5 rounded-lg bg-rose-600 text-white text-xs mr-1">STEP 1</span>
+            빈 방 구조를 확인하고 잘못 배치된 가구 6개를 찾아 터치하세요!
+          </h2>
+          <p id="s3-step-desc" class="text-xs sm:text-sm text-slate-600 mt-0.5">
+            왼쪽 <strong>빈 방 구조 도면(창문·문·콘센트)</strong>과 비교하여 오른쪽 실습 방의 9개 가구 중 원칙에 어긋난 6개를 먼저 찾아보세요.
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="px-3 py-1.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm font-extrabold">
+            찾은 오류: <span id="s3-found-count">0</span>/6 · 재배치 완료: <span id="s3-fixed-count">0</span>/6
+          </span>
+          <button onclick="resetStage3()" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold">
+            🔄 초기화
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+        <!-- 왼쪽: 가구 없는 순수 빈 방 기본 구조 도면 -->
+        <div class="lg:col-span-5 bg-white rounded-2xl p-3 border border-slate-200 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs sm:text-sm font-extrabold text-slate-800">📐 기준: 가구 없는 빈 방 구조</span>
+            <span class="text-[11px] font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full">창·문·콘센트 위치 확인</span>
+          </div>
+          <div class="relative w-full aspect-square rounded-xl border-2 border-slate-300 bg-slate-50 overflow-hidden">
+            <svg viewBox="0 0 400 400" class="w-full h-full">
+              <rect x="30" y="30" width="340" height="340" fill="#ffffff" stroke="#1e293b" stroke-width="6" />
+              <line x1="115" y1="30" x2="115" y2="370" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4" />
+              <line x1="200" y1="30" x2="200" y2="370" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4" />
+              <line x1="285" y1="30" x2="285" y2="370" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4" />
+              <line x1="30" y1="115" x2="370" y2="115" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4" />
+              <line x1="30" y1="200" x2="370" y2="200" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4" />
+              <line x1="30" y1="285" x2="370" y2="285" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4" />
+
+              <!-- 왼쪽 벽 대형 창문 -->
+              <rect x="24" y="95" width="12" height="140" fill="#7dd3fc" stroke="#0284c7" stroke-width="2" />
+              <text x="52" y="160" font-size="12" font-weight="bold" fill="#0369a1">☀️ 대형 창문</text>
+              <text x="52" y="176" font-size="10" fill="#0284c7">(채광·통풍 필수)</text>
+
+              <!-- 우측 상단 방문 & 개폐 반경 -->
+              <line x1="295" y1="30" x2="365" y2="30" stroke="#ffffff" stroke-width="8" />
+              <path d="M 295 30 A 70 70 0 0 0 365 100" fill="rgba(251, 191, 36, 0.15)" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4,4" />
+              <line x1="365" y1="30" x2="365" y2="100" stroke="#d97706" stroke-width="4" />
+              <text x="315" y="116" text-anchor="middle" font-size="11" font-weight="bold" fill="#b45309">🚪 방문 개폐 반경</text>
+
+              <!-- 하단 벽면 콘센트 & 스위치 -->
+              <rect x="135" y="362" width="38" height="12" rx="3" fill="#fef08a" stroke="#ca8a04" stroke-width="2" />
+              <circle cx="147" cy="368" r="2" fill="#854d0e" />
+              <circle cx="161" cy="368" r="2" fill="#854d0e" />
+              <text x="154" y="352" text-anchor="middle" font-size="11" font-weight="bold" fill="#a16207">⚡ 벽면 콘센트</text>
+
+              <!-- 상단 벽 스위치 -->
+              <rect x="255" y="24" width="24" height="10" rx="2" fill="#fed7aa" stroke="#ea580c" stroke-width="2" />
+              <text x="245" y="48" text-anchor="end" font-size="10" font-weight="bold" fill="#c2410c">💡 전등 스위치</text>
+
+              <text x="200" y="215" text-anchor="middle" font-size="13" font-weight="bold" fill="#94a3b8">중앙 출입 동선 확보 구역</text>
+            </svg>
+          </div>
+          <div class="mt-2.5 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
+            <div>• <strong>채광·통풍:</strong> 창문 앞을 키 큰 가구로 막지 않습니다.</div>
+            <div>• <strong>동선·개폐:</strong> 방문이 열리는 부채꼴 반경과 중앙 통로를 비웁니다.</div>
+            <div>• <strong>안전·설비:</strong> 콘센트·스위치를 가리지 않고 책상·스탠드 근처에 둡니다.</div>
+          </div>
+        </div>
+
+        <!-- 오른쪽: 잘못 배치된 가구 실습 방 (총 9개 가구) -->
+        <div class="lg:col-span-7 bg-white rounded-2xl p-3 border border-slate-200 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs sm:text-sm font-extrabold text-slate-800">🔍 실습 방 (총 9개 가구 중 오류 6개 찾기 & 수정)</span>
+            <span id="s3-canvas-guide" class="text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">잘못된 가구를 터치하세요!</span>
+          </div>
+          <div id="s3-room-canvas" class="relative w-full aspect-square max-w-[540px] mx-auto rounded-xl border-2 border-slate-300 bg-white overflow-hidden">
+            <!-- 방 기본 배경 SVG -->
+            <svg viewBox="0 0 400 400" class="w-full h-full pointer-events-none">
+              <rect x="30" y="30" width="340" height="340" fill="#f8fafc" stroke="#1e293b" stroke-width="6" />
+              <rect x="24" y="95" width="12" height="140" fill="#7dd3fc" stroke="#0284c7" stroke-width="2" />
+              <line x1="295" y1="30" x2="365" y2="30" stroke="#f8fafc" stroke-width="8" />
+              <path d="M 295 30 A 70 70 0 0 0 365 100" fill="rgba(251, 191, 36, 0.14)" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4,4" />
+              <line x1="365" y1="30" x2="365" y2="100" stroke="#d97706" stroke-width="4" />
+              <rect x="135" y="362" width="38" height="12" rx="3" fill="#fef08a" stroke="#ca8a04" stroke-width="2" />
+              <rect x="255" y="24" width="24" height="10" rx="2" fill="#fed7aa" stroke="#ea580c" stroke-width="2" />
+            </svg>
+
+            <!-- STEP 2에서 활성화되는 올바른 배치 추천 드롭존 (6개) -->
+            <div id="s3-target-zones" class="absolute inset-0 pointer-events-none"></div>
+
+            <!-- 9개의 배치된 가구 토큰 레이어 -->
+            <div id="s3-furniture-layer" class="absolute inset-0"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- STAGE 4: 효율적인 정리와 수납 (총 16종 생활용품 배치) -->
+    <!-- ===================================================================== -->
+    <section id="stage-4" class="stage-view hidden flex flex-col gap-3">
+      <div class="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <span class="inline-block text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full mb-1">STAGE 4 · 사용 빈도·무게·분류에 따른 정리와 수납</span>
+          <h2 class="text-base sm:text-lg font-extrabold text-slate-900">16가지 생활용품을 높낮이 원리와 분류 바구니에 맞게 수납하세요!</h2>
+          <p class="text-xs sm:text-sm text-slate-600 mt-0.5">
+            물건의 <strong>사용 빈도</strong>와 <strong>무게(안전성)</strong>를 고려해 4단 수납장 또는 소품 분류 바구니로 드래그(또는 터치)하세요.
+          </p>
+        </div>
+        <div class="px-3.5 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs sm:text-sm font-extrabold">
+          수납 완료: <span id="s4-placed-count">0</span> / 16개
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+        <!-- 4단 수납장 + 분류 바구니 2종 -->
+        <div class="lg:col-span-7 flex flex-col gap-3">
+          <div class="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm">
+            <h3 class="text-sm font-extrabold text-slate-800 mb-2">🗄️ 4단 시스템 수납장 (높낮이·무게별 배치)</h3>
+            <div class="flex flex-col gap-2">
+              <div data-shelf="top" class="s4-drop-zone rounded-xl border-2 border-dashed border-sky-300 bg-sky-50/60 p-2.5 transition">
+                <div class="flex items-center justify-between mb-1.5">
+                  <span class="text-xs font-extrabold text-sky-900">⬆️ 맨 위칸 (손이 잘 닿지 않는 높은 곳)</span>
+                  <span class="text-[11px] font-bold text-sky-700 bg-white px-2 py-0.5 rounded-full border border-sky-200">가볍고 가끔 쓰는 물건 (3개)</span>
+                </div>
+                <div id="shelf-items-top" class="flex flex-wrap gap-1.5 min-h-[38px]"></div>
+              </div>
+
+              <div data-shelf="eye" class="s4-drop-zone rounded-xl border-2 border-dashed border-emerald-400 bg-emerald-50/70 p-2.5 transition">
+                <div class="flex items-center justify-between mb-1.5">
+                  <span class="text-xs font-extrabold text-emerald-900">👀 눈높이~허리칸 (골든존 · 가장 손이 잘 닿는 곳)</span>
+                  <span class="text-[11px] font-bold text-emerald-700 bg-white px-2 py-0.5 rounded-full border border-emerald-200">자주 사용하는 물건 (4개)</span>
+                </div>
+                <div id="shelf-items-eye" class="flex flex-wrap gap-1.5 min-h-[38px]"></div>
+              </div>
+
+              <div data-shelf="waist" class="s4-drop-zone rounded-xl border-2 border-dashed border-amber-400 bg-amber-50/70 p-2.5 transition">
+                <div class="flex items-center justify-between mb-1.5">
+                  <span class="text-xs font-extrabold text-amber-900">💪 허리~무릎칸 (힘을 쓰기 편한 중간 하단)</span>
+                  <span class="text-[11px] font-bold text-amber-700 bg-white px-2 py-0.5 rounded-full border border-amber-200">무겁고 가끔 쓰는 물건 (3개)</span>
+                </div>
+                <div id="shelf-items-waist" class="flex flex-wrap gap-1.5 min-h-[38px]"></div>
+              </div>
+
+              <div data-shelf="bottom" class="s4-drop-zone rounded-xl border-2 border-dashed border-rose-300 bg-rose-50/60 p-2.5 transition">
+                <div class="flex items-center justify-between mb-1.5">
+                  <span class="text-xs font-extrabold text-rose-900">⬇️ 맨 아래칸 (바닥에 인접한 가장 안전한 칸)</span>
+                  <span class="text-[11px] font-bold text-rose-700 bg-white px-2 py-0.5 rounded-full border border-rose-200">매우 무겁거나 큰 물건 (2개)</span>
+                </div>
+                <div id="shelf-items-bottom" class="flex flex-wrap gap-1.5 min-h-[38px]"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 수납 도구(바구니) 활용 분류 구역 -->
+          <div class="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm">
+            <h3 class="text-sm font-extrabold text-slate-800 mb-2">🧺 수납 도구(분류 바구니) 활용 — 작은 소품 용도별 정리</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div data-shelf="basket-stationery" class="s4-drop-zone rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50/60 p-2.5 transition">
+                <div class="text-xs font-extrabold text-indigo-900 mb-1">✏️ 학습·문구 소품 바구니 (2개)</div>
+                <div id="shelf-items-basket-stationery" class="flex flex-wrap gap-1.5 min-h-[36px]"></div>
+              </div>
+              <div data-shelf="basket-living" class="s4-drop-zone rounded-xl border-2 border-dashed border-teal-300 bg-teal-50/60 p-2.5 transition">
+                <div class="text-xs font-extrabold text-teal-900 mb-1">🩹 생활·구급 소품 바구니 (2개)</div>
+                <div id="shelf-items-basket-living" class="flex flex-wrap gap-1.5 min-h-[36px]"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 정리할 생활용품 16종 대기열 -->
+        <div class="lg:col-span-5 bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-extrabold text-slate-800">📦 정리할 생활용품 (16종)</h3>
+            <span class="text-[11px] text-slate-500">드래그 또는 터치 후 칸 선택</span>
+          </div>
+          <div id="s4-items-pool" class="grid grid-cols-2 gap-2 max-h-[540px] overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- STAGE 5: 박사님의 조언! (실생활 공간 고민 해결 서술형 미션) -->
+    <!-- ===================================================================== -->
+    <section id="stage-5" class="stage-view hidden flex flex-col gap-3">
+      <div class="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <span class="inline-block text-xs font-bold text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full mb-1">STAGE 5 · 인테리어 박사님의 조언 (서술형 평가)</span>
+          <h2 class="text-base sm:text-lg font-extrabold text-slate-900">지금까지 배운 공간 활용 원리로 의뢰인의 고민을 해결해 주세요!</h2>
+          <p class="text-xs sm:text-sm text-slate-600 mt-0.5">
+            아래 <strong>미션 1</strong>과 <strong>미션 2</strong>의 사연을 읽고, 박사님이 되어 구체적인 해결 방법을 말풍선 안에 직접 서술해 보세요.
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="copyAdviceAnswers()" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-300">
+            📋 내 답안 복사
+          </button>
+          <button onclick="submitAdviceMissions()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-extrabold shadow">
+            ✅ 박사님 조언 제출하기
+          </button>
+        </div>
+      </div>
+
+      <!-- 미션 1 & 미션 2 카드 (말풍선 & 박사님 일러스트) -->
+      <div class="flex flex-col gap-4 bg-slate-200/80 p-4 sm:p-5 rounded-2xl border border-slate-300">
+        <!-- 미션 1 -->
+        <div class="flex flex-col gap-2">
+          <div class="text-sm sm:text-base font-bold text-slate-900 leading-relaxed">
+            <span class="inline-block bg-white border border-slate-400 px-2 py-0.5 rounded font-black text-slate-900 mr-1.5 shadow-2xs">미션 1.</span>
+            거실, 식사실, 부엌이 벽 없이 하나로 탁 트여 있어서 개방감은 최고인데, 엄마가 고등어를 구울 때마다 거실 소파와 커튼에 생선 냄새가 다 배고 TV 소리가 안 들려요!
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="relative flex-1 bg-white rounded-2xl p-3 sm:p-4 shadow-sm border border-slate-200">
+              <textarea id="advice-input-1" rows="3" placeholder="예) 부엌과 거실 사이에 이동식 파티션(가변형 벽체)이나 자바라 커튼, 슬라이딩 중문을 설치해 요리할 때만 공간을 분리하여 냄새와 소음을 막을 수 있습니다." class="w-full text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none resize-none leading-relaxed"></textarea>
+              <div class="hidden sm:block absolute right-[-10px] top-1/2 -translate-y-1/2 w-0 h-0 border-t-[10px] border-t-transparent border-b-[10px] border-b-transparent border-l-[12px] border-l-white"></div>
+            </div>
+            <div class="shrink-0 flex flex-col items-center w-20 sm:w-24 text-center">
+              <span class="text-[11px] sm:text-xs font-black text-white bg-slate-900 px-2 py-0.5 rounded-full mb-1 shadow-xs">박사님의 조언!</span>
+              <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-amber-100 border-2 border-slate-800 flex items-center justify-center text-3xl sm:text-4xl shadow">
+                👨‍🎓
+              </div>
+            </div>
+          </div>
+          <div id="advice-feedback-1" class="hidden p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-xs sm:text-sm text-emerald-950"></div>
+        </div>
+
+        <!-- 미션 2 -->
+        <div class="flex flex-col gap-2 pt-2 border-t border-slate-300/80">
+          <div class="text-sm sm:text-base font-bold text-slate-900 leading-relaxed">
+            <span class="inline-block bg-white border border-slate-400 px-2 py-0.5 rounded font-black text-slate-900 mr-1.5 shadow-2xs">미션 2.</span>
+            내 방이 너무 작아서 침대와 옷장을 놓으면 책상을 놓을 자리가 없고, 책상을 놓으면 옷장을 둘 곳이 없어요. 방 안에서 잠도 자고 옷도 보관하고 공부도 해야하는데 방법이 없을까요?
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="relative flex-1 bg-white rounded-2xl p-3 sm:p-4 shadow-sm border border-slate-200">
+              <textarea id="advice-input-2" rows="3" placeholder="예) 공간을 입체적으로 활용하기 위해 2층은 침대, 1층 아래 공간에는 책상과 수납장을 함께 배치하는 벙커 침대(로프트 침대)를 사용하거나 벽면 선반·수납형 침대를 활용합니다." class="w-full text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none resize-none leading-relaxed"></textarea>
+              <div class="hidden sm:block absolute right-[-10px] top-1/2 -translate-y-1/2 w-0 h-0 border-t-[10px] border-t-transparent border-b-[10px] border-b-transparent border-l-[12px] border-l-white"></div>
+            </div>
+            <div class="shrink-0 flex flex-col items-center w-20 sm:w-24 text-center">
+              <span class="text-[11px] sm:text-xs font-black text-white bg-slate-900 px-2 py-0.5 rounded-full mb-1 shadow-xs">박사님의 조언!</span>
+              <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-amber-100 border-2 border-slate-800 flex items-center justify-center text-3xl sm:text-4xl shadow">
+                👨‍🎓
+              </div>
+            </div>
+          </div>
+          <div id="advice-feedback-2" class="hidden p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-xs sm:text-sm text-emerald-950"></div>
+        </div>
+      </div>
+
+      <!-- 제출 후 활성화되는 자유 원룸 스튜디오 이동 배너 -->
+      <div id="s5-next-banner" class="hidden bg-indigo-600 text-white rounded-2xl p-4 shadow-md flex flex-wrap items-center justify-between gap-3 animate-pop">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl">🎨</span>
+          <div>
+            <div class="text-sm sm:text-base font-black">박사님의 조언 미션 완료! 이제 마지막 실습 단계로 이동할까요?</div>
+            <div class="text-xs text-indigo-100">방금 서술한 다목적·입체적 공간 활용 아이디어를 자유 원룸 스튜디오에서 직접 구현해 보세요!</div>
+          </div>
+        </div>
+        <button onclick="switchStage(6)" class="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-900 font-black text-xs sm:text-sm shadow">
+          🎨 자유 원룸 스튜디오로 이동 ➔
+        </button>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- STAGE 6: 자유 원룸 방꾸미기 스튜디오 & 실시간 인테리어 채점 -->
+    <!-- ===================================================================== -->
+    <section id="stage-6" class="stage-view hidden flex flex-col gap-3">
+      <div class="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <span class="inline-block text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full mb-1">STAGE 6 · 나만의 원룸 인테리어 스튜디오</span>
+          <h2 class="text-base sm:text-lg font-extrabold text-slate-900">배운 원리를 모두 적용해 나만의 원룸을 자유롭게 설계해 보세요!</h2>
+          <p class="text-xs sm:text-sm text-slate-600 mt-0.5">
+            채광·동선·콘센트·다목적·입체적 활용을 고려해 가구를 배치한 뒤 <strong>[✅ 내 방 배치 점검하기]</strong>를 눌러보세요.
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="rotateSelectedS5()" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm">
+            🔄 회전
+          </button>
+          <button onclick="deleteSelectedS5()" class="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs sm:text-sm">
+            🗑️ 삭제
+          </button>
+          <button onclick="clearS5Canvas()" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm">
+            🧹 비우기
+          </button>
+          <button onclick="evaluateStudioRoom()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs sm:text-sm shadow-xs">
+            ✅ 내 방 배치 점검하기
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+        <div class="lg:col-span-8 bg-white rounded-2xl p-3 border border-slate-200 shadow-sm flex flex-col">
+          <div id="s5-canvas-wrapper" class="relative w-full aspect-[16/10] rounded-xl overflow-hidden border-2 border-slate-300 blueprint-grid">
+            <svg viewBox="0 0 800 500" class="w-full h-full pointer-events-none">
+              <rect x="40" y="35" width="720" height="430" fill="#ffffff" stroke="#1e293b" stroke-width="8" />
+              <line x1="510" y1="35" x2="510" y2="235" stroke="#1e293b" stroke-width="6" />
+              <line x1="510" y1="235" x2="620" y2="235" stroke="#1e293b" stroke-width="6" />
+              <line x1="695" y1="235" x2="760" y2="235" stroke="#1e293b" stroke-width="6" />
+              <rect x="130" y="29" width="170" height="12" fill="#7dd3fc" stroke="#0284c7" stroke-width="2" />
+              <text x="215" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#0369a1">☀️ 대형 창문 (가림 주의)</text>
+              <rect x="580" y="460" width="90" height="10" fill="#ffffff" />
+              <path d="M 580 465 A 85 85 0 0 1 665 380" fill="rgba(251,191,36,0.15)" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5,5" />
+              <line x1="580" y1="465" x2="580" y2="380" stroke="#d97706" stroke-width="4" />
+              <text x="625" y="490" text-anchor="middle" font-size="13" font-weight="bold" fill="#b45309">🚪 현관 출입문</text>
+              <rect x="330" y="458" width="54" height="12" rx="3" fill="#fef08a" stroke="#ca8a04" stroke-width="2" />
+              <text x="357" y="490" text-anchor="middle" font-size="12" font-weight="bold" fill="#a16207">⚡ 메인 콘센트</text>
+              <rect x="525" y="55" width="95" height="65" rx="6" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2" />
+              <text x="572" y="92" text-anchor="middle" font-size="12" fill="#64748b" font-weight="bold">욕실</text>
+              <rect x="640" y="55" width="105" height="155" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2" />
+              <text x="692" y="135" text-anchor="middle" font-size="12" fill="#64748b" font-weight="bold">주방</text>
+            </svg>
+            <div id="s5-placed-layer" class="absolute inset-0"></div>
+          </div>
+
+          <!-- 점검 결과 리포트 박스 -->
+          <div id="s5-eval-result" class="hidden mt-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm"></div>
+        </div>
+
+        <div class="lg:col-span-4 bg-white rounded-2xl p-3 border border-slate-200 shadow-sm flex flex-col">
+          <h3 class="text-sm font-extrabold text-slate-800 mb-2">🛋️ 스튜디오 가구 카탈로그 (8종)</h3>
+          <div id="s5-catalog" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 max-h-[430px] overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 교과서 핵심 원리 힌트 모달 -->
+  <div id="hint-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 animate-pop">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+          <span>💡</span> 교과서 핵심 원리 요약 노트
+        </h3>
+        <button onclick="closeHintModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold">✕</button>
+      </div>
+      <div class="py-4 space-y-3 text-xs sm:text-sm text-slate-700 leading-relaxed max-h-[65vh] overflow-y-auto">
+        <div class="p-3 rounded-2xl bg-indigo-50 border border-indigo-100">
+          <div class="font-extrabold text-indigo-900 mb-1">1️⃣ 공간의 다목적 활용</div>
+          시간대나 생활 행위에 따라 하나의 공간을 여러 용도로 겸용하는 방법입니다. <strong>접이식 가구, 이동식 가구(바퀴), 가변형 벽체(파티션·커튼)</strong>를 활용하면 좁은 공간도 넓게 쓸 수 있습니다.
+        </div>
+        <div class="p-3 rounded-2xl bg-purple-50 border border-purple-100">
+          <div class="font-extrabold text-purple-900 mb-1">2️⃣ 공간의 입체적 활용</div>
+          평면뿐 아니라 높이와 깊이(수직·죽은 공간)를 활용하는 방법입니다. <strong>벙커 침대(로프트 침대), 벽면 선반, 계단 밑 수납장, 침대·소파 하부 서랍</strong> 등을 활용합니다.
+        </div>
+        <div class="p-3 rounded-2xl bg-rose-50 border border-rose-100">
+          <div class="font-extrabold text-rose-900 mb-1">3️⃣ 효율적인 가구 배치</div>
+          • 크고 필수적인 가구부터 벽면에 붙여 배치하여 <strong>생활 동선</strong>을 확보합니다.<br />
+          • <strong>창문(채광·통풍), 방문 개폐 반경, 콘센트·스위치</strong>를 가구가 가로막지 않도록 합니다.
+        </div>
+        <div class="p-3 rounded-2xl bg-emerald-50 border border-emerald-100">
+          <div class="font-extrabold text-emerald-900 mb-1">4️⃣ 효율적인 정리와 수납</div>
+          • <strong>눈높이~허리(골든존):</strong> 가장 자주 사용하는 물건 배치<br />
+          • <strong>허리~맨 아래칸:</strong> 무겁거나 큰 물건을 안전하게 배치<br />
+          • <strong>맨 위칸:</strong> 가볍고 사용 빈도가 낮은 물건 배치 + 바구니로 분류
+        </div>
+      </div>
+      <div class="pt-2 flex justify-end">
+        <button onclick="closeHintModal()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm">
+          확인했어요!
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 전역 상태 및 공통 UI 함수
+    // =========================================================================
+    const state = {
+      score: 0,
+      completedStages: { 1: false, 2: false, 3: false, 4: false, 5: false },
+      selectedToken: null,
+      s1IsNight: false,
+      s1Placed: [],
+      s1SelectedUid: null,
+      s2CurrentLifecycle: 'student',
+      s2CompletedZones: {},
+      s3Step: 1,
+      s3FoundErrors: [],
+      s3FixedErrors: [],
+      s3SelectedFurnitureId: null,
+      s4PlacedItems: {},
+      s5Placed: [],
+      s5SelectedUid: null
+    };
+
+    function switchStage(stageNum) {
+      document.querySelectorAll('.stage-view').forEach(el => el.classList.add('hidden'));
+      const target = document.getElementById(`stage-${stageNum}`);
+      if (target) target.classList.remove('hidden');
+
+      document.querySelectorAll('.stage-tab').forEach(btn => {
+        btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-xs');
+        btn.classList.add('bg-slate-100', 'text-slate-600');
+      });
+      const activeBtn = document.getElementById(`tab-${stageNum}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('bg-slate-100', 'text-slate-600');
+        activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-xs');
+      }
+
+      state.selectedToken = null;
+      clearSelectionRings();
+
+      const stageIntroMap = {
+        1: '하단 카탈로그에서 다목적 아이템을 <strong>드래그</strong>하거나 <strong>터치 후 원룸을 탭</strong>해 배치해 보세요!',
+        2: '생애 주기(학생·대학생·직장인·부모)별 죽은 공간을 살리는 16가지 입체 설계를 완성해 보세요!',
+        3: '왼쪽 빈 방 구조 도면과 비교해 오른쪽 실습 방의 9개 가구 중 잘못 배치된 6개를 찾아 터치하세요!',
+        4: '16가지 생활용품을 높이별 수납 원리와 분류 바구니에 맞게 드래그해 정리해 보세요!',
+        5: '실생활 공간 고민 사연 2가지를 읽고 <strong>박사님의 조언</strong> 말풍선에 해결 방법을 직접 서술해 보세요!',
+        6: '원룸 평면도에 가구를 자유롭게 배치한 뒤 <strong>[내 방 배치 점검하기]</strong>를 눌러 점수를 확인하세요!'
+      };
+      showFeedback(stageIntroMap[stageNum] || '', 'info', '🏠');
+      updateProgressBadge();
+    }
+
+    function showFeedback(htmlMsg, type = 'info', icon = '💡') {
+      const bar = document.getElementById('feedback-bar');
+      const textEl = document.getElementById('feedback-text');
+      const iconEl = document.getElementById('feedback-icon');
+      if (!bar || !textEl || !iconEl) return;
+
+      bar.className = 'rounded-2xl px-4 py-2.5 border text-xs sm:text-sm font-semibold flex items-center justify-between gap-3 shadow-2xs transition';
+      if (type === 'success') {
+        bar.classList.add('bg-emerald-50', 'border-emerald-300', 'text-emerald-950');
+      } else if (type === 'warn') {
+        bar.classList.add('bg-amber-50', 'border-amber-300', 'text-amber-950');
+      } else if (type === 'error') {
+        bar.classList.add('bg-rose-50', 'border-rose-300', 'text-rose-950');
+      } else {
+        bar.classList.add('bg-indigo-50', 'border-indigo-200', 'text-indigo-900');
+      }
+      iconEl.textContent = icon;
+      textEl.innerHTML = htmlMsg;
+    }
+
+    function addScore(points) {
+      state.score += points;
+      const el = document.getElementById('total-score');
+      if (el) el.textContent = state.score;
+    }
+
+    function markStageComplete(stageNum) {
+      if (!state.completedStages[stageNum]) {
+        state.completedStages[stageNum] = true;
+        addScore(100);
+        const badge = document.getElementById(`badge-${stageNum}`);
+        if (badge) badge.classList.remove('hidden');
+        updateProgressBadge();
+      }
+    }
+
+    function updateProgressBadge() {
+      const done = Object.values(state.completedStages).filter(Boolean).length;
+      const el = document.getElementById('progress-badge');
+      if (el) el.textContent = `${done}/5 완료`;
+    }
+
+    function clearSelectionRings() {
+      document.querySelectorAll('.selected-ring').forEach(el => el.classList.remove('selected-ring'));
+    }
+
+    function openHintModal() {
+      document.getElementById('hint-modal')?.classList.remove('hidden');
+    }
+
+    function closeHintModal() {
+      document.getElementById('hint-modal')?.classList.add('hidden');
+    }
+
+    // =========================================================================
+    // STAGE 1: 공간의 다목적 활용 (좋은 아이템 5개 + 별로인 아이템 4개 = 9종)
+    // =========================================================================
+    const S1_ITEMS = [
+      { id: 'fold-desk', name: '접이식 벽면 책상·식탁', icon: '📐', good: true, w: 15, h: 12, color: 'bg-indigo-100 border-indigo-500 text-indigo-900', desc: '낮에는 펼쳐서 공부·식사, 밤에는 접어서 넓은 취침 공간 확보!' },
+      { id: 'curtain-part', name: '이동식 커튼·접이식 파티션', icon: '🪟', good: true, w: 18, h: 8, color: 'bg-emerald-100 border-emerald-500 text-emerald-900', desc: '필요할 때만 침실과 학습 공간을 시각적으로 유연하게 분리!' },
+      { id: 'sofa-bed', name: '트랜스폼 소파 베드', icon: '🛋️', good: true, w: 18, h: 13, color: 'bg-sky-100 border-sky-500 text-sky-900', desc: '낮에는 푹신한 거실 소파로, 밤에는 펼쳐서 침대로 변신!' },
+      { id: 'caster-trolley', name: '바퀴 달린 이동식 트롤리', icon: '🛒', good: true, w: 11, h: 11, color: 'bg-teal-100 border-teal-500 text-teal-900', desc: '책상 옆·식탁 옆 어디든 굴려서 이동하는 만능 수납장!' },
+      { id: 'stack-stool', name: '적층식 스툴·보조 테이블', icon: '🪑', good: true, w: 11, h: 11, color: 'bg-purple-100 border-purple-500 text-purple-900', desc: '손님이 올 때만 꺼내 쓰고 평소에는 겹쳐서 보관!' },
+      { id: 'brick-wall', name: '고정식 콘크리트 가벽', icon: '🧱', good: false, w: 22, h: 10, color: 'bg-rose-100 border-rose-500 text-rose-900', desc: '비효율적! 한번 세우면 옮길 수 없어 채광과 동선을 영구적으로 막습니다.' },
+      { id: 'huge-table', name: '초대형 6인용 원목 식탁', icon: '🍽️', good: false, w: 25, h: 18, color: 'bg-rose-100 border-rose-500 text-rose-900', desc: '비효율적! 원룸 면적의 절반을 차지해 잘 공간과 이동 통로가 사라집니다.' },
+      { id: 'giant-lsofa', name: '거대한 L자 고정형 소파', icon: '🛋️', good: false, w: 26, h: 20, color: 'bg-rose-100 border-rose-500 text-rose-900', desc: '비효율적! 부피가 너무 커서 다른 용도로 공간을 전환할 수 없습니다.' },
+      { id: 'king-bed', name: '무거운 킹사이즈 4주식 침대', icon: '🏰', good: false, w: 26, h: 22, color: 'bg-rose-100 border-rose-500 text-rose-900', desc: '비효율적! 낮 시간에도 거실이나 학습 공간으로 전혀 활용할 수 없습니다.' }
+    ];
+
+    function initStage1() {
+      const catalog = document.getElementById('s1-catalog');
+      catalog.innerHTML = '';
+
+      S1_ITEMS.forEach(item => {
+        const card = document.createElement('div');
+        card.className = `drag-token p-2.5 rounded-xl border-2 bg-white hover:bg-slate-50 border-slate-200 flex items-center gap-2.5 shadow-2xs`;
+        card.draggable = true;
+        card.innerHTML = `
+          <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-xl shrink-0">${item.icon}</div>
+          <div class="min-w-0 flex-1">
+            <div class="text-xs font-extrabold text-slate-900 truncate">${item.name}</div>
+            <div class="text-[11px] text-slate-500 line-clamp-1">${item.desc}</div>
+          </div>
+        `;
+
+        card.addEventListener('dragstart', e => {
+          e.dataTransfer.setData('text/plain', JSON.stringify({ stage: 1, itemId: item.id }));
+        });
+
+        card.addEventListener('click', () => {
+          clearSelectionRings();
+          card.classList.add('selected-ring');
+          state.selectedToken = { stage: 1, itemId: item.id };
+          showFeedback(`<strong>[${item.name}]</strong> 선택됨! 왼쪽 원룸 평면도의 원하는 위치를 터치해 배치하세요.`, 'info', item.icon);
+        });
+
+        catalog.appendChild(card);
+      });
+
+      const wrapper = document.getElementById('s1-canvas-wrapper');
+      wrapper.addEventListener('dragover', e => e.preventDefault());
+      wrapper.addEventListener('drop', e => {
+        e.preventDefault();
+        try {
+          const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+          if (data.stage === 1) {
+            const rect = wrapper.getBoundingClientRect();
+            const xPct = ((e.clientX - rect.left) / rect.width) * 100;
+            const yPct = ((e.clientY - rect.top) / rect.height) * 100;
+            placeS1Item(data.itemId, xPct, yPct);
+          }
+        } catch (err) {}
+      });
+
+      wrapper.addEventListener('click', e => {
+        if (e.target.closest('.s1-placed-node')) return;
+        if (state.selectedToken && state.selectedToken.stage === 1) {
+          const rect = wrapper.getBoundingClientRect();
+          const xPct = ((e.clientX - rect.left) / rect.width) * 100;
+          const yPct = ((e.clientY - rect.top) / rect.height) * 100;
+          placeS1Item(state.selectedToken.itemId, xPct, yPct);
+          state.selectedToken = null;
+          clearSelectionRings();
+        }
+      });
+    }
+
+    function placeS1Item(itemId, xPct, yPct) {
+      const def = S1_ITEMS.find(i => i.id === itemId);
+      if (!def) return;
+
+      const clampedX = Math.max(8, Math.min(82, xPct - def.w / 2));
+      const clampedY = Math.max(10, Math.min(82, yPct - def.h / 2));
+
+      const uid = 's1_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+      state.s1Placed.push({ uid, itemId, x: clampedX, y: clampedY, rot: 0 });
+      state.s1SelectedUid = uid;
+      renderS1Placed();
+
+      if (def.good) {
+        addScore(15);
+        showFeedback(`👍 <strong>[${def.name}]</strong> 배치 완료! ${def.desc}`, 'success', def.icon);
+      } else {
+        showFeedback(`⚠️ 주의! <strong>[${def.name}]</strong>은(는) ${def.desc}`, 'warn', '⚠️');
+      }
+    }
+
+    function renderS1Placed() {
+      const layer = document.getElementById('s1-placed-layer');
+      layer.innerHTML = '';
+
+      state.s1Placed.forEach(node => {
+        const def = S1_ITEMS.find(i => i.id === node.itemId);
+        if (!def) return;
+
+        const el = document.createElement('div');
+        const isSel = state.s1SelectedUid === node.uid;
+        el.className = `s1-placed-node absolute rounded-xl border-2 shadow-md flex flex-col items-center justify-center text-center p-1 cursor-move transition-shadow ${def.color} ${isSel ? 'ring-4 ring-amber-400 z-20' : 'z-10'}`;
+        el.style.left = node.x + '%';
+        el.style.top = node.y + '%';
+        el.style.width = def.w + '%';
+        el.style.height = def.h + '%';
+        el.style.transform = `rotate(${node.rot}deg)`;
+
+        let displayIcon = def.icon;
+        let displayLabel = def.name.split(' ')[0];
+        if (state.s1IsNight && def.id === 'sofa-bed') {
+          displayIcon = '🛏️';
+          displayLabel = '침대 변신!';
+        } else if (state.s1IsNight && def.id === 'fold-desk') {
+          displayIcon = '📏';
+          displayLabel = '접힘(공간확보)';
+        }
+
+        el.innerHTML = `
+          <span class="text-base sm:text-xl leading-none pointer-events-none">${displayIcon}</span>
+          <span class="text-[9px] sm:text-[10px] font-extrabold leading-tight mt-0.5 pointer-events-none truncate max-w-full">${displayLabel}</span>
+        `;
+
+        let isDragging = false;
+        let startX = 0, startY = 0, origX = node.x, origY = node.y;
+
+        const onPointerDown = e => {
+          e.stopPropagation();
+          state.s1SelectedUid = node.uid;
+          isDragging = true;
+          const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+          const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+          startX = clientX;
+          startY = clientY;
+          origX = node.x;
+          origY = node.y;
+          renderS1Placed();
+        };
+
+        const onPointerMove = e => {
+          if (!isDragging) return;
+          const wrapper = document.getElementById('s1-canvas-wrapper');
+          const rect = wrapper.getBoundingClientRect();
+          const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+          const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+          const dxPct = ((clientX - startX) / rect.width) * 100;
+          const dyPct = ((clientY - startY) / rect.height) * 100;
+          node.x = Math.max(6, Math.min(84, origX + dxPct));
+          node.y = Math.max(8, Math.min(84, origY + dyPct));
+          el.style.left = node.x + '%';
+          el.style.top = node.y + '%';
+        };
+
+        const onPointerUp = () => {
+          if (isDragging) {
+            isDragging = false;
+            window.removeEventListener('mousemove', onPointerMove);
+            window.removeEventListener('mouseup', onPointerUp);
+            window.removeEventListener('touchmove', onPointerMove);
+            window.removeEventListener('touchend', onPointerUp);
+          }
+        };
+
+        el.addEventListener('mousedown', e => {
+          onPointerDown(e);
+          window.addEventListener('mousemove', onPointerMove);
+          window.addEventListener('mouseup', onPointerUp);
+        });
+        el.addEventListener('touchstart', e => {
+          onPointerDown(e);
+          window.addEventListener('touchmove', onPointerMove, { passive: false });
+          window.addEventListener('touchend', onPointerUp);
+        }, { passive: true });
+
+        layer.appendChild(el);
+      });
+    }
+
+    function rotateSelectedS1() {
+      const target = state.s1Placed.find(n => n.uid === state.s1SelectedUid);
+      if (!target) {
+        showFeedback('먼저 원룸 안에 배치된 아이템을 터치해 선택해 주세요!', 'warn', '🔄');
+        return;
+      }
+      target.rot = (target.rot + 90) % 360;
+      renderS1Placed();
+    }
+
+    function deleteSelectedS1() {
+      if (!state.s1SelectedUid) {
+        showFeedback('삭제할 아이템을 원룸 평면도에서 먼저 선택해 주세요!', 'warn', '🗑️');
+        return;
+      }
+      state.s1Placed = state.s1Placed.filter(n => n.uid !== state.s1SelectedUid);
+      state.s1SelectedUid = null;
+      renderS1Placed();
+      showFeedback('선택한 아이템을 제거했습니다.', 'info', '🗑️');
+    }
+
+    function toggleS1DayNight() {
+      state.s1IsNight = !state.s1IsNight;
+      const overlay = document.getElementById('s1-night-overlay');
+      const btn = document.getElementById('s1-time-btn');
+      const icon = document.getElementById('s1-time-icon');
+      const label = document.getElementById('s1-time-label');
+      const badge = document.getElementById('s1-mode-badge');
+
+      if (state.s1IsNight) {
+        overlay.classList.remove('hidden');
+        btn.className = 'px-3.5 py-2 rounded-xl bg-indigo-900 hover:bg-indigo-800 text-white font-extrabold text-xs sm:text-sm flex items-center gap-1.5 shadow-xs transition';
+        icon.textContent = '🌙';
+        label.textContent = '현재: 밤 모드 (취침·휴식)';
+        badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-900 text-indigo-100';
+        badge.textContent = '🌙 밤: 취침 및 개인 휴식 모드';
+        showFeedback('🌙 <strong>밤 모드 전환!</strong> 소파 베드는 침대로 펼쳐지고, 접이식 책상은 접혀서 취침 공간이 넓어졌습니다!', 'info', '🌙');
+      } else {
+        overlay.classList.add('hidden');
+        btn.className = 'px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold text-xs sm:text-sm flex items-center gap-1.5 shadow-xs transition';
+        icon.textContent = '☀️';
+        label.textContent = '현재: 낮 모드 (공부·거실)';
+        badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800';
+        badge.textContent = '☀️ 낮: 학습 및 휴식 모드';
+        showFeedback('☀️ <strong>낮 모드 전환!</strong> 책상과 트롤리를 펼쳐 학습과 식사 공간으로 활용합니다!', 'info', '☀️');
+      }
+      renderS1Placed();
+    }
+
+    function checkStage1Complete() {
+      const goodCount = state.s1Placed.filter(n => S1_ITEMS.find(i => i.id === n.itemId)?.good).length;
+      const badCount = state.s1Placed.filter(n => !S1_ITEMS.find(i => i.id === n.itemId)?.good).length;
+
+      if (badCount > 0) {
+        showFeedback(`❌ 원룸에 부피가 너무 크거나 고정된 비효율적 가구가 ${badCount}개 남아 있습니다! 선택 후 <strong>[🗑️ 삭제]</strong>로 치워주세요.`, 'error', '🚫');
+        return;
+      }
+      if (goodCount < 2) {
+        showFeedback('다목적 인테리어 아이템(접이식 책상, 파티션, 소파 베드 등)을 <strong>2개 이상</strong> 배치해 보세요!', 'warn', '💡');
+        return;
+      }
+      markStageComplete(1);
+      showFeedback('🎉 훌륭합니다! 시간과 용도에 따라 공간을 변신시키는 다목적 공간 설계를 완벽히 해냈습니다! (+100점)', 'success', '🏆');
+    }
+
+    // =========================================================================
+    // STAGE 2: 공간의 입체적 활용 (생애 주기 4단계 × 4가지 = 16가지 설계)
+    // =========================================================================
+    const S2_LIFECYCLES = {
+      student: {
+        icon: '🎒',
+        title: '1. 중고등학생의 방 : 수면과 집중 학습, 학용품 수납을 한 방에!',
+        desc: '좁은 학생 방에서 바닥 면적을 아끼고 수직·벽면·하부 공간을 입체적으로 활용하세요.',
+        zones: [
+          { id: 'st-z1', title: '벙커 침대 아래 빈 공간', hint: '높은 침대 하부의 1층 수직 공간', answerId: 'st-i1', resultText: '2층은 침실, 1층은 집중 학습 책상으로 수직 분리 완성!' },
+          { id: 'st-z2', title: '책상 위 비어 있는 벽면', hint: '시선이 닿는 수직 벽면 공간', answerId: 'st-i2', resultText: '벽걸이 타공판·선반으로 교과서와 학용품을 깔끔하게 정리!' },
+          { id: 'st-z3', title: '침대 매트리스 아래 하부 공간', hint: '침대 프레임 밑 숨은 깊이 공간', answerId: 'st-i3', resultText: '슬라이딩 침대 하부 서랍으로 계절 교복과 체육복 수납!' },
+          { id: 'st-z4', title: '방문 뒤쪽 좁은 틈새 벽', hint: '문을 열었을 때 남는 얇은 벽면', answerId: 'st-i4', resultText: '도어 행거 선반으로 가방과 모자를 바닥에 두지 않고 걸어 보관!' }
+        ],
+        items: [
+          { id: 'st-i1', name: '로프트(벙커) 하부 책상 세트', icon: '🖥️', desc: '침대 아래에 쏙 들어가는 학습 책상' },
+          { id: 'st-i2', name: '벽면 부착형 타공판·책선반', icon: '📚', desc: '벽면을 수납장으로 바꾸는 수직 선반' },
+          { id: 'st-i3', name: '침대 밑 바퀴형 슬라이딩 서랍', icon: '🗄️', desc: '침대 하부 죽은 공간을 살리는 서랍장' },
+          { id: 'st-i4', name: '문걸이형 슬림 가방·소품 행거', icon: '🎒', desc: '방문 뒤 틈새를 활용하는 걸이형 수납' }
+        ]
+      },
+      college: {
+        icon: '🎓',
+        title: '2. 대학생 원룸(자취방) : 나만의 개성과 생활용품 수납 극대화!',
+        desc: '원룸의 높은 천장과 좁은 주방·세탁 틈새를 입체적으로 설계해 보세요.',
+        zones: [
+          { id: 'co-z1', title: '천장고가 높은 복층 상부 공간', hint: '수직 높이를 활용한 다락형 공간', answerId: 'co-i1', resultText: '복층 상부는 아늑한 침실, 하부는 거실·작업실로 입체 분리!' },
+          { id: 'co-z2', title: '냉장고와 벽 사이 15cm 틈새', hint: '가전제품 옆 좁은 수직 틈새', answerId: 'co-i2', resultText: '슬림 틈새 트롤리로 식재료와 생필품을 빈틈없이 수납!' },
+          { id: 'co-z3', title: '소파(좌식 매트) 아래 하부 공간', hint: '휴식 가구 밑의 낮은 공간', answerId: 'co-i3', resultText: '수납형 수납 스툴·하부 박스로 전공 서적과 취미용품 보관!' },
+          { id: 'co-z4', title: '옷장 내부 행거 아래 빈 공간', hint: '짧은 옷을 걸었을 때 남는 하단 공간', answerId: 'co-i4', resultText: '행거 하단 압축 서랍장으로 옷장 수납 용량 2배 확장!' }
+        ],
+        items: [
+          { id: 'co-i1', name: '복층 계단 겸용 수납 사다리', icon: '🪜', desc: '복층으로 올라가는 계단 속 수납칸' },
+          { id: 'co-i2', name: '15cm 초슬림 틈새 캐스터 선반', icon: '🥫', desc: '냉장고 옆 좁은 틈에 딱 맞는 이동 선반' },
+          { id: 'co-i3', name: '뚜껑형 수납 벤치·스툴', icon: '📦', desc: '앉아서 쉬면서 내부에 물건을 넣는 가구' },
+          { id: 'co-i4', name: '행거 하단 3단 모듈 서랍장', icon: '👕', desc: '옷걸이 아래 남는 높이를 채우는 서랍' }
+        ]
+      },
+      worker: {
+        icon: '💼',
+        title: '3. 직장인의 재택근무 공간 : 업무 집중과 퇴근 후 휴식의 완벽 분리!',
+        desc: '거실과 침실 속 자투리 코너와 벽면을 활용해 효율적인 홈 오피스를 구성하세요.',
+        zones: [
+          { id: 'wk-z1', title: '거실 한쪽 비어 있는 모서리(코너)', hint: '두 벽이 만나는 90도 각진 죽은 공간', answerId: 'wk-i1', resultText: '코너형 L자 데스크·선반으로 죽은 모서리를 홈 오피스로 변신!' },
+          { id: 'wk-z2', title: '모니터 위쪽 허공 벽면', hint: '책상 위 눈높이 상단 벽면', answerId: 'wk-i2', resultText: '무타공 벽선반으로 서류함과 업무용 라우터를 깔끔히 배치!' },
+          { id: 'wk-z3', title: '침대 머리맡(헤드보드) 위 공간', hint: '침대 헤드 뒤쪽의 좁은 벽면', answerId: 'wk-i3', resultText: '수납형 헤드보드로 안경·독서등·태블릿을 편리하게 보관!' },
+          { id: 'wk-z4', title: '베란다(발코니) 벽면 상단 공간', hint: '세탁기 위쪽 비어 있는 수직 벽', answerId: 'wk-i4', resultText: '세탁기 상부 랙 선반으로 세제와 캠핑·계절 용품 수납!' }
+        ],
+        items: [
+          { id: 'wk-i1', name: '모서리 맞춤형 코너 데스크·선반', icon: '💻', desc: '벽 모서리 각도에 맞춰 설계된 코너 가구' },
+          { id: 'wk-i2', name: '수직 2단 벽걸이 오피스 선반', icon: '🗂️', desc: '책상 위 벽면을 활용하는 서류 수납 선반' },
+          { id: 'wk-i3', name: '슬림 수납형 침대 헤드보드', icon: '🛏️', desc: '협탁 대신 침대 머리맡 틈새를 살리는 수납장' },
+          { id: 'wk-i4', name: '세탁기 위 수직 확장 랙 선반', icon: '🧺', desc: '가전제품 위쪽의 비어 있는 높이를 활용하는 선반' }
+        ]
+      },
+      parent: {
+        icon: '👨‍👩‍👧‍👦',
+        title: '4. 부모가 되었을 때(가족 공간) : 늘어난 가족 짐과 아이 용품 입체 수납!',
+        desc: '가족 구성원이 늘어나면서 부족해진 수납 공간을 집안 곳곳의 숨은 공간에서 찾아내세요.',
+        zones: [
+          { id: 'pa-z1', title: '계단 아래 경사진 삼각형 공간', hint: '주택·복층 계단 밑의 죽은 공간', answerId: 'pa-i1', resultText: '계단 밑 맞춤형 빌트인 팬트리로 아이 장난감과 생활용품 수납!' },
+          { id: 'pa-z2', title: '현관 신발장 아래 바닥 틈새', hint: '띄움 시공된 신발장 하부 빈 공간', answerId: 'pa-i2', resultText: '신발장 하부 틈새에 아이 유모차·자주 신는 신발 깔끔 보관!' },
+          { id: 'pa-z3', title: '주방 싱크대 상부장 아래 벽면', hint: '조리대 위쪽 타일 벽면 공간', answerId: 'pa-i3', resultText: '공중 부양 자석·걸이형 주방 랙으로 조리도구를 위생적으로 수납!' },
+          { id: 'pa-z4', title: '아이 방 2층 침대 계단·하부', hint: '형제·자매가 함께 쓰는 수직 공간', answerId: 'pa-i4', resultText: '이층 침대 + 하부 책장 구조로 두 아이의 잠자리와 책장을 동시에!' }
+        ],
+        items: [
+          { id: 'pa-i1', name: '계단 하부 맞춤형 빌트인 수납장', icon: '🏠', desc: '계단 아래 삼각형 죽은 공간을 채우는 맞춤장' },
+          { id: 'pa-i2', name: '현관 하부 슬라이딩 슈즈·용품 트레이', icon: '👟', desc: '신발장 밑 띄움 공간을 활용하는 수납 트레이' },
+          { id: 'pa-i3', name: '벽면 부착형 공중 주방 수납 랙', icon: '🍳', desc: '조리대 바닥을 넓게 쓰게 해주는 벽걸이 수납' },
+          { id: 'pa-i4', name: '이층 침대 & 계단 수납 통합 시스템', icon: '🧸', desc: '수직 높이를 활용해 취침·수납을 결합한 가구' }
+        ]
+      }
+    };
+
+    function initStage2() {
+      selectLifecycle('student');
+    }
+
+    function selectLifecycle(lcKey) {
+      state.s2CurrentLifecycle = lcKey;
+      state.selectedToken = null;
+      clearSelectionRings();
+
+      const lcData = S2_LIFECYCLES[lcKey];
+      document.querySelectorAll('.lifecycle-btn').forEach(btn => {
+        btn.className = 'lifecycle-btn p-3 rounded-2xl border-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-extrabold text-xs sm:text-sm flex items-center justify-between transition';
+      });
+      const activeBtn = document.getElementById(`lifecycle-btn-${lcKey}`);
+      if (activeBtn) {
+        activeBtn.className = 'lifecycle-btn p-3 rounded-2xl border-2 border-purple-600 bg-purple-600 text-white font-extrabold text-xs sm:text-sm flex items-center justify-between shadow-xs transition';
+      }
+
+      document.getElementById('s2-scenario-icon').textContent = lcData.icon;
+      document.getElementById('s2-scenario-title').textContent = lcData.title;
+      document.getElementById('s2-scenario-desc').textContent = lcData.desc;
+
+      const zonesGrid = document.getElementById('s2-zones-grid');
+      zonesGrid.innerHTML = '';
+
+      lcData.zones.forEach(zone => {
+        const isDone = !!state.s2CompletedZones[zone.id];
+        const matchedItem = lcData.items.find(i => i.id === zone.answerId);
+
+        const zoneEl = document.createElement('div');
+        zoneEl.className = `rounded-2xl border-2 p-3.5 transition flex flex-col justify-between min-h-[145px] ${
+          isDone
+            ? 'bg-emerald-50 border-emerald-400 shadow-xs'
+            : 'bg-white border-dashed border-purple-300 hover:border-purple-500'
+        }`;
+
+        if (isDone && matchedItem) {
+          zoneEl.innerHTML = `
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold text-emerald-800">✅ ${zone.title}</span>
+              <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900">설계 완료</span>
+            </div>
+            <div class="my-2 flex items-center gap-2.5 bg-white p-2.5 rounded-xl border border-emerald-200">
+              <span class="text-2xl">${matchedItem.icon}</span>
+              <div>
+                <div class="text-xs font-extrabold text-slate-900">${matchedItem.name}</div>
+                <div class="text-[11px] text-emerald-700 font-semibold">${zone.resultText}</div>
+              </div>
+            </div>
+          `;
+        } else {
+          zoneEl.innerHTML = `
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs sm:text-sm font-extrabold text-slate-800">📍 ${zone.title}</span>
+                <span class="text-[11px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">죽은 공간</span>
+              </div>
+              <p class="text-xs text-slate-500">${zone.hint}</p>
+            </div>
+            <div class="mt-3 py-2.5 px-3 rounded-xl bg-purple-50/70 border border-purple-200 text-center text-xs font-bold text-purple-700">
+              여기에 알맞은 입체 가구를 드래그 또는 터치 배치
+            </div>
+          `;
+
+          zoneEl.addEventListener('dragover', e => e.preventDefault());
+          zoneEl.addEventListener('drop', e => {
+            e.preventDefault();
+            try {
+              const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+              if (data.stage === 2) handleS2Drop(zone, data.itemId);
+            } catch (err) {}
+          });
+          zoneEl.addEventListener('click', () => {
+            if (state.selectedToken && state.selectedToken.stage === 2) {
+              handleS2Drop(zone, state.selectedToken.itemId);
+            } else {
+              showFeedback(`오른쪽에서 <strong>[${zone.title}]</strong>에 어울리는 입체 아이템을 먼저 선택하거나 드래그하세요!`, 'info', '📍');
+            }
+          });
+        }
+        zonesGrid.appendChild(zoneEl);
+      });
+
+      const itemsList = document.getElementById('s2-items-list');
+      itemsList.innerHTML = '';
+
+      lcData.items.forEach(item => {
+        const alreadyUsed = lcData.zones.some(z => z.answerId === item.id && state.s2CompletedZones[z.id]);
+        const itemEl = document.createElement('div');
+        itemEl.className = `drag-token p-3 rounded-xl border-2 flex items-center gap-3 transition ${
+          alreadyUsed
+            ? 'bg-slate-100 border-slate-200 opacity-50 pointer-events-none'
+            : 'bg-white border-slate-200 hover:border-purple-400 shadow-2xs'
+        }`;
+        itemEl.draggable = !alreadyUsed;
+        itemEl.innerHTML = `
+          <div class="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-xl shrink-0">${item.icon}</div>
+          <div class="min-w-0 flex-1">
+            <div class="text-xs font-extrabold text-slate-900">${item.name}</div>
+            <div class="text-[11px] text-slate-500">${item.desc}</div>
+          </div>
+          ${alreadyUsed ? '<span class="text-xs font-bold text-emerald-600">배치됨</span>' : ''}
+        `;
+
+        if (!alreadyUsed) {
+          itemEl.addEventListener('dragstart', e => {
+            e.dataTransfer.setData('text/plain', JSON.stringify({ stage: 2, itemId: item.id }));
+          });
+          itemEl.addEventListener('click', () => {
+            clearSelectionRings();
+            itemEl.classList.add('selected-ring');
+            state.selectedToken = { stage: 2, itemId: item.id };
+            showFeedback(`<strong>[${item.name}]</strong> 선택됨! 왼쪽의 알맞은 죽은 공간 카드를 터치하세요.`, 'info', item.icon);
+          });
+        }
+        itemsList.appendChild(itemEl);
+      });
+
+      updateS2Counters();
+    }
+
+    function handleS2Drop(zone, itemId) {
+      if (zone.answerId === itemId) {
+        state.s2CompletedZones[zone.id] = true;
+        state.selectedToken = null;
+        clearSelectionRings();
+        addScore(15);
+        showFeedback(`✨ 정답입니다! <strong>${zone.resultText}</strong>`, 'success', '🎉');
+        selectLifecycle(state.s2CurrentLifecycle);
+
+        const totalDone = Object.keys(state.s2CompletedZones).length;
+        if (totalDone === 16) {
+          markStageComplete(2);
+          showFeedback('🏆 대단합니다! 4가지 생애 주기의 16가지 입체적 공간 활용 설계를 모두 완성했습니다! (+100점)', 'success', '🏆');
+        }
+      } else {
+        showFeedback('🤔 해당 죽은 공간의 형태와 높이에 더 잘 맞는 다른 입체 가구가 있어요! 공간 설명을 다시 읽어보세요.', 'warn', '💡');
+      }
+    }
+
+    function updateS2Counters() {
+      const totalDone = Object.keys(state.s2CompletedZones).length;
+      document.getElementById('s2-total-count').textContent = totalDone;
+
+      Object.keys(S2_LIFECYCLES).forEach(lcKey => {
+        const zones = S2_LIFECYCLES[lcKey].zones;
+        const doneCount = zones.filter(z => state.s2CompletedZones[z.id]).length;
+        const badge = document.getElementById(`lc-count-${lcKey}`);
+        if (badge) badge.textContent = `${doneCount}/4`;
+      });
+    }
+
+    // =========================================================================
+    // STAGE 3: 효율적 가구 배치 (빈 방 도면 비교 + 9개 가구 중 6개 오류 수정)
+    // =========================================================================
+    const S3_FURNITURE = [
+      {
+        id: 'wardrobe', name: '큰 옷장', icon: '🚪', isError: true,
+        badPos: { x: 10, y: 26, w: 18, h: 32 },
+        goodPos: { x: 11, y: 62, w: 18, h: 28 },
+        errorReason: '큰 옷장이 왼쪽 대형 창문을 가로막아 채광과 통풍을 방해하고 있습니다!',
+        fixGuide: '창문 아래쪽 빈 왼쪽 벽면으로 드래그하여 창문을 열어주세요.'
+      },
+      {
+        id: 'desk', name: '학습 책상', icon: '🖥️', isError: true,
+        badPos: { x: 70, y: 12, w: 20, h: 16 },
+        goodPos: { x: 32, y: 74, w: 22, h: 16 },
+        errorReason: '책상이 방문이 열리는 부채꼴 개폐 반경에 걸려 문이 열리지 않습니다!',
+        fixGuide: '방문 반경을 피하고 콘센트가 가까운 하단 벽면으로 이동하세요.'
+      },
+      {
+        id: 'bed', name: '싱글 침대', icon: '🛏️', isError: true,
+        badPos: { x: 42, y: 40, w: 24, h: 30 },
+        goodPos: { x: 64, y: 42, w: 24, h: 32 },
+        errorReason: '침대가 방 한가운데 놓여 가족의 이동 동선을 사방으로 막고 있습니다!',
+        fixGuide: '오른쪽 벽면에 붙여 배치하여 방 중앙에 넓은 생활 동선을 확보하세요.'
+      },
+      {
+        id: 'bookshelf', name: '낮은 서랍장', icon: '🗄️', isError: true,
+        badPos: { x: 32, y: 76, w: 20, h: 14 },
+        goodPos: { x: 34, y: 10, w: 22, h: 14 },
+        errorReason: '서랍장이 하단 벽면 콘센트를 완전히 덮어 전기 기구를 쓸 수 없습니다!',
+        fixGuide: '콘센트를 가리지 않도록 상단 빈 벽면으로 옮겨주세요.'
+      },
+      {
+        id: 'chair', name: '회전 의자', icon: '🪑', isError: true,
+        badPos: { x: 26, y: 48, w: 12, h: 12 },
+        goodPos: { x: 37, y: 60, w: 12, h: 12 },
+        errorReason: '의자가 책상과 동떨어진 통로 한가운데 놓여 발에 걸리기 쉽습니다!',
+        fixGuide: '책상 앞자리로 배치해 학습 동선을 자연스럽게 연결하세요.'
+      },
+      {
+        id: 'lamp', name: '플로어 스탠드', icon: '💡', isError: true,
+        badPos: { x: 12, y: 11, w: 11, h: 11 },
+        goodPos: { x: 56, y: 78, w: 11, h: 11 },
+        errorReason: '스탠드가 콘센트와 정반대 구석에 있어 전선이 방을 가로지릅니다!',
+        fixGuide: '하단 콘센트 바로 옆으로 옮겨 전선 걸림 사고를 예방하세요.'
+      },
+      {
+        id: 'plant', name: '공기정화 화분', icon: '🪴', isError: false,
+        badPos: { x: 11, y: 63, w: 10, h: 10 },
+        goodPos: { x: 11, y: 63, w: 10, h: 10 },
+        normalMsg: '창가 옆 햇빛이 잘 들고 동선을 방해하지 않는 올바른 배치입니다!'
+      },
+      {
+        id: 'mirror', name: '벽면 전신거울', icon: '🪞', isError: false,
+        badPos: { x: 78, y: 78, w: 11, h: 11 },
+        goodPos: { x: 78, y: 78, w: 11, h: 11 },
+        normalMsg: '우측 하단 벽면에 안전하게 밀착되어 옷매무새를 확인하기 좋은 올바른 위치입니다!'
+      },
+      {
+        id: 'rug', name: '원형 패브릭 러그', icon: '🧶', isError: false,
+        badPos: { x: 46, y: 26, w: 15, h: 12 },
+        goodPos: { x: 46, y: 26, w: 15, h: 12 },
+        normalMsg: '문 개폐나 가구 이동을 방해하지 않는 아늑한 포인트 배치입니다!'
+      }
+    ];
+
+    function initStage3() {
+      renderStage3();
+    }
+
+    function resetStage3() {
+      state.s3Step = 1;
+      state.s3FoundErrors = [];
+      state.s3FixedErrors = [];
+      state.s3SelectedFurnitureId = null;
+      renderStage3();
+      showFeedback('실습 방이 초기화되었습니다. 잘못 배치된 가구 6개를 찾아 터치해 보세요!', 'info', '🔄');
+    }
+
+    function renderStage3() {
+      document.getElementById('s3-found-count').textContent = state.s3FoundErrors.length;
+      document.getElementById('s3-fixed-count').textContent = state.s3FixedErrors.length;
+
+      const stepBadge = document.getElementById('s3-step-badge');
+      const stepDesc = document.getElementById('s3-step-desc');
+      const canvasGuide = document.getElementById('s3-canvas-guide');
+
+      if (state.s3Step === 1) {
+        stepBadge.textContent = 'STEP 1 · 틀린 곳 찾기';
+        stepBadge.className = 'inline-block px-2 py-0.5 rounded-lg bg-rose-600 text-white text-xs mr-1';
+        stepDesc.innerHTML = '왼쪽 <strong>빈 방 구조 도면(창문·문·콘센트)</strong>과 비교해 오른쪽 방의 9개 가구 중 잘못 배치된 <strong>6개</strong>를 터치하세요!';
+        canvasGuide.textContent = '잘못된 가구를 터치하세요!';
+        canvasGuide.className = 'text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full';
+      } else {
+        stepBadge.textContent = 'STEP 2 · 올바른 위치로 재배치';
+        stepBadge.className = 'inline-block px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-xs mr-1';
+        stepDesc.innerHTML = '빨간색 테두리 가구 6개를 채광·동선·콘센트를 고려해 <strong>초록색 배치 구역</strong>으로 직접 드래그해 수정하세요!';
+        canvasGuide.textContent = '가구를 끌어서 올바른 구역에 놓으세요!';
+        canvasGuide.className = 'text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full';
+      }
+
+      const targetLayer = document.getElementById('s3-target-zones');
+      targetLayer.innerHTML = '';
+
+      if (state.s3Step === 2) {
+        targetLayer.classList.remove('pointer-events-none');
+        S3_FURNITURE.filter(f => f.isError).forEach(f => {
+          const isFixed = state.s3FixedErrors.includes(f.id);
+          if (isFixed) return;
+
+          const zone = document.createElement('div');
+          zone.dataset.targetId = f.id;
+          zone.className = 's3-drop-zone absolute rounded-xl border-2 border-dashed border-emerald-500 bg-emerald-100/50 cursor-pointer transition hover:bg-emerald-200/60';
+          zone.style.left = f.goodPos.x + '%';
+          zone.style.top = f.goodPos.y + '%';
+          zone.style.width = f.goodPos.w + '%';
+          zone.style.height = f.goodPos.h + '%';
+
+          zone.addEventListener('click', () => {
+            if (state.s3SelectedFurnitureId) {
+              attemptFixS3Furniture(state.s3SelectedFurnitureId, f.id);
+            } else {
+              showFeedback('먼저 옮길 가구(빨간 테두리)를 끌거나 터치해 선택한 뒤 빈 구역을 눌러주세요!', 'info', '👆');
+            }
+          });
+
+          targetLayer.appendChild(zone);
+        });
+      } else {
+        targetLayer.classList.add('pointer-events-none');
+      }
+
+      const furnLayer = document.getElementById('s3-furniture-layer');
+      furnLayer.innerHTML = '';
+
+      S3_FURNITURE.forEach(f => {
+        const isFound = state.s3FoundErrors.includes(f.id);
+        const isFixed = state.s3FixedErrors.includes(f.id);
+        const pos = isFixed ? f.goodPos : f.badPos;
+        const isSelected = state.s3SelectedFurnitureId === f.id;
+
+        const el = document.createElement('div');
+        let styleClasses = 'bg-slate-100 border-slate-400 text-slate-800';
+        if (isFixed) {
+          styleClasses = 'bg-emerald-100 border-emerald-600 text-emerald-950';
+        } else if (isFound) {
+          styleClasses = 'bg-rose-100 border-rose-600 text-rose-950 ring-2 ring-rose-400';
+        }
+        if (isSelected) {
+          styleClasses += ' ring-4 ring-amber-400 scale-105 z-30';
+        }
+
+        el.className = `absolute rounded-xl border-2 shadow-sm flex flex-col items-center justify-center text-center p-1 select-none ${styleClasses} ${
+          state.s3Step === 2 && f.isError && !isFixed ? 'cursor-grab z-20 touch-none' : 'cursor-pointer z-10 transition'
+        }`;
+        el.style.left = pos.x + '%';
+        el.style.top = pos.y + '%';
+        el.style.width = pos.w + '%';
+        el.style.height = pos.h + '%';
+
+        const badgeMark = isFixed ? '✅' : (isFound ? '⭕' : '');
+        el.innerHTML = `
+          ${badgeMark ? `<span class="absolute -top-2 -right-2 text-xs bg-white rounded-full shadow-xs px-0.5">${badgeMark}</span>` : ''}
+          <span class="text-sm sm:text-lg leading-none pointer-events-none">${f.icon}</span>
+          <span class="text-[9px] sm:text-[10px] font-extrabold leading-tight mt-0.5 pointer-events-none">${f.name}</span>
+        `;
+
+        if (state.s3Step === 2 && f.isError && !isFixed) {
+          let isDragging = false;
+          let moved = false;
+          let startX = 0, startY = 0;
+
+          const onDragStart = e => {
+            e.stopPropagation();
+            isDragging = true;
+            moved = false;
+            state.s3SelectedFurnitureId = f.id;
+            const pt = e.touches ? e.touches[0] : e;
+            startX = pt.clientX;
+            startY = pt.clientY;
+            el.style.zIndex = '40';
+            el.classList.add('scale-105', 'shadow-xl');
+          };
+
+          const onDragMove = e => {
+            if (!isDragging) return;
+            const pt = e.touches ? e.touches[0] : e;
+            const dx = pt.clientX - startX;
+            const dy = pt.clientY - startY;
+            if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
+            if (e.cancelable) e.preventDefault();
+            el.style.transform = `translate(${dx}px, ${dy}px)`;
+          };
+
+          const onDragEnd = e => {
+            if (!isDragging) return;
+            isDragging = false;
+            el.style.transform = '';
+            el.style.zIndex = '';
+            el.classList.remove('scale-105', 'shadow-xl');
+
+            window.removeEventListener('mousemove', onDragMove);
+            window.removeEventListener('mouseup', onDragEnd);
+            window.removeEventListener('touchmove', onDragMove);
+            window.removeEventListener('touchend', onDragEnd);
+
+            if (!moved) {
+              renderStage3();
+              showFeedback(`<strong>[${f.name}]</strong> 선택됨! ${f.fixGuide}`, 'info', f.icon);
+              return;
+            }
+
+            const pt = e.changedTouches ? e.changedTouches[0] : e;
+            const canvasRect = document.getElementById('s3-room-canvas').getBoundingClientRect();
+            const dropXPct = ((pt.clientX - canvasRect.left) / canvasRect.width) * 100;
+            const dropYPct = ((pt.clientY - canvasRect.top) / canvasRect.height) * 100;
+
+            const zones = S3_FURNITURE.filter(item => item.isError && !state.s3FixedErrors.includes(item.id));
+            const matchedZone = zones.find(z =>
+              dropXPct >= z.goodPos.x - 4 &&
+              dropXPct <= z.goodPos.x + z.goodPos.w + 4 &&
+              dropYPct >= z.goodPos.y - 4 &&
+              dropYPct <= z.goodPos.y + z.goodPos.h + 4
+            );
+
+            if (matchedZone) {
+              attemptFixS3Furniture(f.id, matchedZone.id);
+            } else {
+              renderStage3();
+              showFeedback(`🤔 <strong>[${f.name}]</strong>을(를) 초록색 배치 구역 안으로 정확히 옮겨주세요! (${f.fixGuide})`, 'warn', '💡');
+            }
+          };
+
+          el.addEventListener('mousedown', e => {
+            onDragStart(e);
+            window.addEventListener('mousemove', onDragMove);
+            window.addEventListener('mouseup', onDragEnd);
+          });
+          el.addEventListener('touchstart', e => {
+            onDragStart(e);
+            window.addEventListener('touchmove', onDragMove, { passive: false });
+            window.addEventListener('touchend', onDragEnd);
+          }, { passive: false });
+        } else {
+          el.addEventListener('click', () => {
+            if (state.s3Step === 1) {
+              if (!f.isError) {
+                showFeedback(`✅ <strong>[${f.name}]</strong>은(는) 잘 배치되어 있습니다! (${f.normalMsg})`, 'info', '👍');
+                return;
+              }
+              if (!isFound) {
+                state.s3FoundErrors.push(f.id);
+                addScore(10);
+                showFeedback(`⭕ 오류 발견 (${state.s3FoundErrors.length}/6)! <strong>[${f.name}]</strong>: ${f.errorReason}`, 'success', '🔍');
+
+                if (state.s3FoundErrors.length === 6) {
+                  state.s3Step = 2;
+                  setTimeout(() => {
+                    showFeedback('🎯 6개의 오류를 모두 찾았습니다! 이제 <strong>STEP 2</strong>: 각 가구를 직접 드래그해 올바른 초록색 구역으로 재배치하세요!', 'success', '✨');
+                    renderStage3();
+                  }, 700);
+                }
+                renderStage3();
+              } else {
+                showFeedback(`이미 찾은 오류입니다! <strong>[${f.name}]</strong>: ${f.errorReason}`, 'warn', '⭕');
+              }
+            }
+          });
+        }
+
+        furnLayer.appendChild(el);
+      });
+    }
+
+    function attemptFixS3Furniture(draggedId, targetFurnitureId) {
+      if (draggedId === targetFurnitureId) {
+        if (!state.s3FixedErrors.includes(draggedId)) {
+          state.s3FixedErrors.push(draggedId);
+          state.s3SelectedFurnitureId = null;
+          addScore(15);
+          const def = S3_FURNITURE.find(f => f.id === draggedId);
+          showFeedback(`✅ <strong>[${def.name}]</strong> 올바른 위치로 재배치 완료! (${state.s3FixedErrors.length}/6)`, 'success', '👏');
+          renderStage3();
+
+          if (state.s3FixedErrors.length === 6) {
+            markStageComplete(3);
+            showFeedback('🏆 완벽합니다! 채광·동선·콘센트·문 개폐 반경을 모두 살린 모범 가구 배치를 완성했습니다! (+100점)', 'success', '🎉');
+          }
+        }
+      } else {
+        showFeedback('🤔 그 자리는 다른 가구에 더 알맞은 위치입니다! 채광·콘센트·동선 원리를 다시 확인해 보세요.', 'warn', '💡');
+      }
+    }
+
+    // =========================================================================
+    // STAGE 4: 효율적인 정리와 수납 (총 16종 생활용품 배치)
+    // =========================================================================
+    const S4_ITEMS = [
+      { id: 's4-1', name: '매일 보는 교과서·공책', icon: '📘', target: 'eye', reason: '매일 자주 사용하므로 가장 손이 잘 닿는 눈높이 골든존에 둡니다.' },
+      { id: 's4-2', name: '자주 쓰는 텀블러·머그컵', icon: '🥤', target: 'eye', reason: '하루에도 여러 번 꺼내 쓰므로 눈높이 칸이 가장 편리합니다.' },
+      { id: 's4-3', name: '외출용 손목시계·차키', icon: '⌚', target: 'eye', reason: '매일 외출할 때 바로 찾을 수 있도록 눈높이 칸에 보관합니다.' },
+      { id: 's4-4', name: '자주 읽는 애독서·다이어리', icon: '📓', target: 'eye', reason: '수시로 꺼내 기록하고 읽는 물건은 눈높이 칸이 알맞습니다.' },
+      { id: 's4-5', name: '가벼운 여분 솜이불·베개', icon: '☁️', target: 'top', reason: '부피는 있지만 가볍고 계절이 바뀔 때만 쓰므로 맨 위칸이 안전합니다.' },
+      { id: 's4-6', name: '가벼운 크리스마스·계절 소품', icon: '🎄', target: 'top', reason: '1년에 한두 번 쓰는 가벼운 장식품은 손이 덜 닿는 맨 위칸에 둡니다.' },
+      { id: 's4-7', name: '가벼운 여행용 보조 파우치', icon: '🧳', target: 'top', reason: '가볍고 가끔 여행 갈 때만 꺼내 쓰므로 맨 위칸이 적합합니다.' },
+      { id: 's4-8', name: '무거운 백과사전·전공서적 묶음', icon: '📚', target: 'waist', reason: '무겁고 가끔 찾아보는 책은 허리~무릎 높이에 두어야 안전하게 꺼냅니다.' },
+      { id: 's4-9', name: '가끔 쓰는 공구함 세트', icon: '🧰', target: 'waist', reason: '무게가 나가는 공구함은 높은 곳에서 떨어지면 위험하므로 허리~무릎칸에 둡니다.' },
+      { id: 's4-10', name: '가끔 쓰는 보드게임·다기 세트', icon: '🎲', target: 'waist', reason: '무게감이 있고 가끔 사용하는 물건은 허리~무릎 높이가 적당합니다.' },
+      { id: 's4-11', name: '무거운 2L 생수 묶음 박스', icon: '💧', target: 'bottom', reason: '매우 무겁고 부피가 큰 생수는 안전을 위해 맨 아래칸에 배치합니다.' },
+      { id: 's4-12', name: '대형 겨울용 전기히터·선풍기', icon: '🌀', target: 'bottom', reason: '크고 무거운 계절 가전은 무게중심을 낮추어 맨 아래칸에 보관합니다.' },
+      { id: 's4-13', name: '형광펜·풀·가위·스테이플러', icon: '✂️', target: 'basket-stationery', reason: '작고 흩어지기 쉬운 문구류는 학습·문구 소품 바구니에 모아 정리합니다.' },
+      { id: 's4-14', name: '포스트잇·클립·수정테이프', icon: '📎', target: 'basket-stationery', reason: '자잘한 사무·학습 소품은 바구니로 분류해 한눈에 보이게 수납합니다.' },
+      { id: 's4-15', name: '밴드·연고·체온계·소독약', icon: '🩹', target: 'basket-living', reason: '응급 시 바로 찾을 수 있도록 생활·구급 소품 바구니에 분류합니다.' },
+      { id: 's4-16', name: '손톱깎이·면봉·건전지·케이블', icon: '🔋', target: 'basket-living', reason: '자잘한 생활 소품은 전용 바구니에 담아 서랍 속 혼잡을 막습니다.' }
+    ];
+
+    function initStage4() {
+      const zones = document.querySelectorAll('.s4-drop-zone');
+      zones.forEach(zone => {
+        const shelfKey = zone.getAttribute('data-shelf');
+        zone.addEventListener('dragover', e => e.preventDefault());
+        zone.addEventListener('drop', e => {
+          e.preventDefault();
+          try {
+            const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+            if (data.stage === 4) handleS4Place(data.itemId, shelfKey);
+          } catch (err) {}
+        });
+        zone.addEventListener('click', () => {
+          if (state.selectedToken && state.selectedToken.stage === 4) {
+            handleS4Place(state.selectedToken.itemId, shelfKey);
+          }
+        });
+      });
+
+      renderStage4();
+    }
+
+    function renderStage4() {
+      const shelfKeys = ['top', 'eye', 'waist', 'bottom', 'basket-stationery', 'basket-living'];
+      shelfKeys.forEach(k => {
+        const container = document.getElementById(`shelf-items-${k}`);
+        if (container) container.innerHTML = '';
+      });
+
+      Object.entries(state.s4PlacedItems).forEach(([itemId, shelfKey]) => {
+        const item = S4_ITEMS.find(i => i.id === itemId);
+        const container = document.getElementById(`shelf-items-${shelfKey}`);
+        if (item && container) {
+          const pill = document.createElement('span');
+          pill.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-300 shadow-2xs text-xs font-bold text-slate-800 animate-pop';
+          pill.innerHTML = `<span>${item.icon}</span> <span>${item.name}</span>`;
+          container.appendChild(pill);
+        }
+      });
+
+      const pool = document.getElementById('s4-items-pool');
+      pool.innerHTML = '';
+
+      S4_ITEMS.forEach(item => {
+        if (state.s4PlacedItems[item.id]) return;
+
+        const card = document.createElement('div');
+        card.className = 'drag-token p-2.5 rounded-xl border-2 border-slate-200 bg-white hover:border-emerald-400 flex items-center gap-2 shadow-2xs transition cursor-grab select-none';
+        card.innerHTML = `
+          <span class="text-xl shrink-0 pointer-events-none">${item.icon}</span>
+          <span class="text-xs font-extrabold text-slate-800 leading-snug pointer-events-none">${item.name}</span>
+        `;
+
+        let isDragging = false;
+        let moved = false;
+        let startX = 0, startY = 0;
+        let ghostEl = null;
+
+        const onDragStart = e => {
+          isDragging = true;
+          moved = false;
+          const pt = e.touches ? e.touches[0] : e;
+          startX = pt.clientX;
+          startY = pt.clientY;
+        };
+
+        const onDragMove = e => {
+          if (!isDragging) return;
+          const pt = e.touches ? e.touches[0] : e;
+          const dx = pt.clientX - startX;
+          const dy = pt.clientY - startY;
+
+          if (!moved && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+            moved = true;
+            ghostEl = document.createElement('div');
+            ghostEl.className = 'fixed z-50 pointer-events-none px-3 py-2 rounded-xl border-2 border-emerald-500 bg-white shadow-xl flex items-center gap-2 text-xs font-extrabold text-slate-900';
+            ghostEl.innerHTML = `<span class="text-lg">${item.icon}</span><span>${item.name}</span>`;
+            document.body.appendChild(ghostEl);
+            card.classList.add('opacity-40');
+          }
+
+          if (moved && ghostEl) {
+            if (e.cancelable) e.preventDefault();
+            ghostEl.style.left = (pt.clientX - ghostEl.offsetWidth / 2) + 'px';
+            ghostEl.style.top = (pt.clientY - ghostEl.offsetHeight / 2) + 'px';
+
+            document.querySelectorAll('.s4-drop-zone').forEach(z => z.classList.remove('ring-4', 'ring-emerald-400'));
+            const elemBelow = document.elementFromPoint(pt.clientX, pt.clientY);
+            const dropZone = elemBelow?.closest('.s4-drop-zone');
+            if (dropZone) dropZone.classList.add('ring-4', 'ring-emerald-400');
+          }
+        };
+
+        const onDragEnd = e => {
+          if (!isDragging) return;
+          isDragging = false;
+          card.classList.remove('opacity-40');
+          document.querySelectorAll('.s4-drop-zone').forEach(z => z.classList.remove('ring-4', 'ring-emerald-400'));
+
+          if (ghostEl) {
+            ghostEl.remove();
+            ghostEl = null;
+          }
+
+          window.removeEventListener('mousemove', onDragMove);
+          window.removeEventListener('mouseup', onDragEnd);
+          window.removeEventListener('touchmove', onDragMove);
+          window.removeEventListener('touchend', onDragEnd);
+
+          if (!moved) {
+            clearSelectionRings();
+            card.classList.add('selected-ring');
+            state.selectedToken = { stage: 4, itemId: item.id };
+            showFeedback(`<strong>[${item.name}]</strong> 선택됨! 왼쪽 수납장의 알맞은 칸이나 바구니를 터치하세요.`, 'info', item.icon);
+            return;
+          }
+
+          const pt = e.changedTouches ? e.changedTouches[0] : e;
+          const elemBelow = document.elementFromPoint(pt.clientX, pt.clientY);
+          const dropZone = elemBelow?.closest('.s4-drop-zone');
+          if (dropZone) {
+            const shelfKey = dropZone.getAttribute('data-shelf');
+            handleS4Place(item.id, shelfKey);
+          }
+        };
+
+        card.addEventListener('mousedown', e => {
+          onDragStart(e);
+          window.addEventListener('mousemove', onDragMove);
+          window.addEventListener('mouseup', onDragEnd);
+        });
+        card.addEventListener('touchstart', e => {
+          onDragStart(e);
+          window.addEventListener('touchmove', onDragMove, { passive: false });
+          window.addEventListener('touchend', onDragEnd);
+        }, { passive: false });
+
+        pool.appendChild(card);
+      });
+
+      document.getElementById('s4-placed-count').textContent = Object.keys(state.s4PlacedItems).length;
+    }
+
+    function handleS4Place(itemId, shelfKey) {
+      const item = S4_ITEMS.find(i => i.id === itemId);
+      if (!item || state.s4PlacedItems[itemId]) return;
+
+      if (item.target === shelfKey) {
+        state.s4PlacedItems[itemId] = shelfKey;
+        state.selectedToken = null;
+        clearSelectionRings();
+        addScore(10);
+        showFeedback(`✅ 정답! <strong>[${item.name}]</strong> — ${item.reason}`, 'success', item.icon);
+        renderStage4();
+
+        if (Object.keys(state.s4PlacedItems).length === 16) {
+          markStageComplete(4);
+          showFeedback('🏆 완벽합니다! 16가지 물건을 모두 정리했습니다! 이제 상단의 <strong>[🎓 박사님의 조언 (서술)]</strong> 단계로 이동해 보세요! (+100점)', 'success', '🎉');
+        }
+      } else {
+        showFeedback(`🤔 <strong>[${item.name}]</strong>의 무게, 사용 빈도, 또는 소품 분류 여부를 다시 생각해 보세요!`, 'warn', '💡');
+      }
+    }
+
+    // =========================================================================
+    // STAGE 5: 박사님의 조언! (실생활 공간 고민 서술형 평가)
+    // =========================================================================
+    function submitAdviceMissions() {
+      const ans1 = (document.getElementById('advice-input-1')?.value || '').trim();
+      const ans2 = (document.getElementById('advice-input-2')?.value || '').trim();
+
+      if (ans1.length < 10 || ans2.length < 10) {
+        showFeedback('미션 1과 미션 2의 해결 방법을 각각 10자 이상 구체적으로 작성해 주세요!', 'warn', '✍️');
+        return;
+      }
+
+      const keywords1 = ['파티션', '커튼', '중문', '가벽', '분리', '다목적', '가변', '문', '차단', '환기'];
+      const keywords2 = ['벙커', '입체', '2층', '이층', '선반', '벽', '수납', '하부', '아래', '접이식', '다목적'];
+
+      const matched1 = keywords1.filter(k => ans1.includes(k));
+      const matched2 = keywords2.filter(k => ans2.includes(k));
+
+      const fb1 = document.getElementById('advice-feedback-1');
+      const fb2 = document.getElementById('advice-feedback-2');
+
+      fb1.classList.remove('hidden');
+      fb1.innerHTML = `
+        <div class="font-extrabold text-emerald-800 mb-1">
+          💡 미션 1 점검 ${matched1.length > 0 ? `(핵심 키워드 포함: ${matched1.join(', ')})` : '(창의적 서술 완료!)'}
+        </div>
+        <div class="text-xs text-slate-700">
+          <strong>예시 모범 조언:</strong> 평상시에는 개방감을 유지하다가 요리할 때만 공간을 나눌 수 있도록 <strong>이동식 파티션, 자바라 커튼, 슬라이딩 중문(가변형 벽체)</strong>을 설치하여 냄새와 소음을 차단하는 <strong>다목적 공간 분리</strong> 방법을 활용합니다.
+        </div>
+      `;
+
+      fb2.classList.remove('hidden');
+      fb2.innerHTML = `
+        <div class="font-extrabold text-emerald-800 mb-1">
+          💡 미션 2 점검 ${matched2.length > 0 ? `(핵심 키워드 포함: ${matched2.join(', ')})` : '(창의적 서술 완료!)'}
+        </div>
+        <div class="text-xs text-slate-700">
+          <strong>예시 모범 조언:</strong> 방의 높이를 <strong>입체적으로 활용</strong>하여 위층은 침대, 아래층은 책상과 옷장(수납장)이 결합된 <strong>벙커 침대(로프트 침대)</strong>를 배치하거나, <strong>벽면 선반·수납형 침대</strong>를 활용해 바닥 면적을 넓게 사용합니다.
+        </div>
+      `;
+
+      markStageComplete(5);
+      document.getElementById('s5-next-banner')?.classList.remove('hidden');
+      showFeedback('🎓 훌륭한 박사님의 조언입니다! 예시 조언과 비교해 보고 자유 원룸 스튜디오로 이동해 보세요! (+100점)', 'success', '🏆');
+    }
+
+    function copyAdviceAnswers() {
+      const ans1 = (document.getElementById('advice-input-1')?.value || '').trim();
+      const ans2 = (document.getElementById('advice-input-2')?.value || '').trim();
+      const text = `[박사님의 조언 서술 답안]\n\n• 미션 1: ${ans1 || '(미작성)'}\n• 미션 2: ${ans2 || '(미작성)'}`;
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showFeedback('📋 작성한 미션 1·2 서술 답안이 클립보드에 복사되었습니다!', 'info', '📋');
+    }
+
+    // =========================================================================
+    // STAGE 6: 자유 원룸 방꾸미기 스튜디오 & 자동 채점
+    // =========================================================================
+    const S5_CATALOG_ITEMS = [
+      { id: 'st-bunk', name: '벙커침대+하부책상', icon: '🛏️', w: 20, h: 16, tag: '입체·다목적', color: 'bg-purple-100 border-purple-500 text-purple-900' },
+      { id: 'st-sofabed', name: '접이식 소파베드', icon: '🛋️', w: 18, h: 13, tag: '다목적', color: 'bg-indigo-100 border-indigo-500 text-indigo-900' },
+      { id: 'st-folddesk', name: '접이식 테이블·책상', icon: '📐', w: 15, h: 12, tag: '다목적', color: 'bg-sky-100 border-sky-500 text-sky-900' },
+      { id: 'st-partition', name: '오픈 책장 파티션', icon: '📚', w: 18, h: 8, tag: '다목적·수납', color: 'bg-emerald-100 border-emerald-500 text-emerald-900' },
+      { id: 'st-wallshelf', name: '벽걸이 수직 선반', icon: '🪜', w: 14, h: 8, tag: '입체수납', color: 'bg-teal-100 border-teal-500 text-teal-900' },
+      { id: 'st-wardrobe', name: '슬림 빌트인 옷장', icon: '🚪', w: 14, h: 12, tag: '수납', color: 'bg-amber-100 border-amber-500 text-amber-900' },
+      { id: 'st-trolley', name: '이동식 트롤리', icon: '🛒', w: 11, h: 11, tag: '다목적', color: 'bg-cyan-100 border-cyan-500 text-cyan-900' },
+      { id: 'st-plant', name: '공기정화 화분·러그', icon: '🪴', w: 11, h: 11, tag: '쾌적환경', color: 'bg-lime-100 border-lime-500 text-lime-900' }
+    ];
+
+    function initStage5() {
+      const catalog = document.getElementById('s5-catalog');
+      catalog.innerHTML = '';
+
+      S5_CATALOG_ITEMS.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'drag-token p-2.5 rounded-xl border-2 border-slate-200 bg-white hover:border-indigo-400 flex items-center justify-between gap-2 shadow-2xs';
+        card.draggable = true;
+        card.innerHTML = `
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="text-xl shrink-0">${item.icon}</span>
+            <span class="text-xs font-extrabold text-slate-900 truncate">${item.name}</span>
+          </div>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 shrink-0">${item.tag}</span>
+        `;
+
+        card.addEventListener('dragstart', e => {
+          e.dataTransfer.setData('text/plain', JSON.stringify({ stage: 6, itemId: item.id }));
+        });
+        card.addEventListener('click', () => {
+          clearSelectionRings();
+          card.classList.add('selected-ring');
+          state.selectedToken = { stage: 6, itemId: item.id };
+          showFeedback(`<strong>[${item.name}]</strong> 선택됨! 위쪽 원룸 평면도의 원하는 위치를 터치해 놓으세요.`, 'info', item.icon);
+        });
+
+        catalog.appendChild(card);
+      });
+
+      const wrapper = document.getElementById('s5-canvas-wrapper');
+      wrapper.addEventListener('dragover', e => e.preventDefault());
+      wrapper.addEventListener('drop', e => {
+        e.preventDefault();
+        try {
+          const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+          if (data.stage === 6) {
+            const rect = wrapper.getBoundingClientRect();
+            const xPct = ((e.clientX - rect.left) / rect.width) * 100;
+            const yPct = ((e.clientY - rect.top) / rect.height) * 100;
+            placeStudioItem(data.itemId, xPct, yPct);
+          }
+        } catch (err) {}
+      });
+
+      wrapper.addEventListener('click', e => {
+        if (e.target.closest('.s5-placed-node')) return;
+        if (state.selectedToken && state.selectedToken.stage === 6) {
+          const rect = wrapper.getBoundingClientRect();
+          const xPct = ((e.clientX - rect.left) / rect.width) * 100;
+          const yPct = ((e.clientY - rect.top) / rect.height) * 100;
+          placeStudioItem(state.selectedToken.itemId, xPct, yPct);
+          state.selectedToken = null;
+          clearSelectionRings();
+        }
+      });
+    }
+
+    function placeStudioItem(itemId, xPct, yPct) {
+      const def = S5_CATALOG_ITEMS.find(i => i.id === itemId);
+      if (!def) return;
+      const clampedX = Math.max(7, Math.min(82, xPct - def.w / 2));
+      const clampedY = Math.max(9, Math.min(82, yPct - def.h / 2));
+      const uid = 's5_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+      state.s5Placed.push({ uid, itemId, x: clampedX, y: clampedY, rot: 0 });
+      state.s5SelectedUid = uid;
+      renderStudioPlaced();
+    }
+
+    function renderStudioPlaced() {
+      const layer = document.getElementById('s5-placed-layer');
+      layer.innerHTML = '';
+
+      state.s5Placed.forEach(node => {
+        const def = S5_CATALOG_ITEMS.find(i => i.id === node.itemId);
+        if (!def) return;
+        const isSel = state.s5SelectedUid === node.uid;
+
+        const el = document.createElement('div');
+        el.className = `s5-placed-node absolute rounded-xl border-2 shadow-md flex flex-col items-center justify-center text-center p-1 cursor-move ${def.color} ${isSel ? 'ring-4 ring-amber-400 z-20' : 'z-10'}`;
+        el.style.left = node.x + '%';
+        el.style.top = node.y + '%';
+        el.style.width = def.w + '%';
+        el.style.height = def.h + '%';
+        el.style.transform = `rotate(${node.rot}deg)`;
+        el.innerHTML = `
+          <span class="text-base sm:text-xl leading-none pointer-events-none">${def.icon}</span>
+          <span class="text-[9px] sm:text-[10px] font-extrabold leading-tight mt-0.5 pointer-events-none truncate max-w-full">${def.name}</span>
+        `;
+
+        let isDragging = false, startX = 0, startY = 0, origX = node.x, origY = node.y;
+        const onDown = e => {
+          e.stopPropagation();
+          state.s5SelectedUid = node.uid;
+          isDragging = true;
+          startX = e.touches ? e.touches[0].clientX : e.clientX;
+          startY = e.touches ? e.touches[0].clientY : e.clientY;
+          origX = node.x;
+          origY = node.y;
+          renderStudioPlaced();
+        };
+        const onMove = e => {
+          if (!isDragging) return;
+          const rect = document.getElementById('s5-canvas-wrapper').getBoundingClientRect();
+          const cx = e.touches ? e.touches[0].clientX : e.clientX;
+          const cy = e.touches ? e.touches[0].clientY : e.clientY;
+          node.x = Math.max(6, Math.min(84, origX + ((cx - startX) / rect.width) * 100));
+          node.y = Math.max(8, Math.min(84, origY + ((cy - startY) / rect.height) * 100));
+          el.style.left = node.x + '%';
+          el.style.top = node.y + '%';
+        };
+        const onUp = () => {
+          isDragging = false;
+          window.removeEventListener('mousemove', onMove);
+          window.removeEventListener('mouseup', onUp);
+          window.removeEventListener('touchmove', onMove);
+          window.removeEventListener('touchend', onUp);
+        };
+
+        el.addEventListener('mousedown', e => { onDown(e); window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp); });
+        el.addEventListener('touchstart', e => { onDown(e); window.addEventListener('touchmove', onMove, { passive: false }); window.addEventListener('touchend', onUp); }, { passive: true });
+
+        layer.appendChild(el);
+      });
+    }
+
+    function rotateSelectedS5() {
+      const target = state.s5Placed.find(n => n.uid === state.s5SelectedUid);
+      if (target) {
+        target.rot = (target.rot + 90) % 360;
+        renderStudioPlaced();
+      }
+    }
+
+    function deleteSelectedS5() {
+      if (state.s5SelectedUid) {
+        state.s5Placed = state.s5Placed.filter(n => n.uid !== state.s5SelectedUid);
+        state.s5SelectedUid = null;
+        renderStudioPlaced();
+      }
+    }
+
+    function clearS5Canvas() {
+      state.s5Placed = [];
+      state.s5SelectedUid = null;
+      renderStudioPlaced();
+      document.getElementById('s5-eval-result').classList.add('hidden');
+    }
+
+    function evaluateStudioRoom() {
+      if (state.s5Placed.length < 3) {
+        showFeedback('가구를 <strong>3개 이상</strong> 배치한 뒤 내 방 배치 점검을 실행해 주세요!', 'warn', '🏠');
+        return;
+      }
+
+      let score = 100;
+      const notes = [];
+
+      const blockedWindow = state.s5Placed.some(n => n.x < 36 && n.y < 18);
+      if (blockedWindow) {
+        score -= 20;
+        notes.push('❌ <strong>채광·통풍 감점 (-20점):</strong> 상단 대형 창문 앞을 가구가 가로막고 있습니다.');
+      } else {
+        notes.push('✅ <strong>채광·통풍 우수:</strong> 창문 앞 공간을 비워 햇빛과 바람이 잘 통합니다.');
+      }
+
+      const blockedDoor = state.s5Placed.some(n => n.x > 65 && n.y > 70);
+      if (blockedDoor) {
+        score -= 20;
+        notes.push('❌ <strong>출입 동선 감점 (-20점):</strong> 우측 하단 현관문 개폐 구역에 가구가 놓여 있습니다.');
+      } else {
+        notes.push('✅ <strong>출입 동선 우수:</strong> 현관문 개폐 반경과 이동 통로가 쾌적하게 확보되었습니다.');
+      }
+
+      const blockedOutlet = state.s5Placed.some(n => n.x > 36 && n.x < 50 && n.y > 80);
+      if (blockedOutlet) {
+        score -= 15;
+        notes.push('❌ <strong>설비 안전 감점 (-15점):</strong> 하단 중앙 메인 콘센트를 가구가 덮고 있습니다.');
+      } else {
+        notes.push('✅ <strong>콘센트 접근성 우수:</strong> 벽면 콘센트를 가리지 않아 전기 기구 사용이 편리합니다.');
+      }
+
+      const hasSmartItem = state.s5Placed.some(n => ['st-bunk', 'st-sofabed', 'st-folddesk', 'st-partition', 'st-wallshelf'].includes(n.itemId));
+      if (hasSmartItem) {
+        notes.push('🌟 <strong>다목적·입체적 활용 보너스:</strong> 원룸의 한계를 극복하는 스마트 가구를 훌륭히 활용했습니다!');
+      } else {
+        score -= 15;
+        notes.push('💡 <strong>공간 활용 팁 (-15점):</strong> 벙커침대, 접이식 책상, 벽걸이 선반 등 다목적·입체 가구를 추가해 보세요.');
+      }
+
+      const resBox = document.getElementById('s5-eval-result');
+      resBox.classList.remove('hidden');
+      resBox.innerHTML = `
+        <div class="flex items-center justify-between mb-2">
+          <span class="font-extrabold text-slate-900 text-sm sm:text-base">📊 인테리어 스튜디오 종합 진단 결과</span>
+          <span class="px-3 py-1 rounded-full bg-indigo-600 text-white font-extrabold text-sm">${Math.max(0, score)}점 / 100점</span>
+        </div>
+        <div class="space-y-1 text-slate-700">${notes.map(n => `<div>${n}</div>`).join('')}</div>
+      `;
+      showFeedback(`🎨 내 방 배치 점검 완료! 종합 점수는 <strong>${Math.max(0, score)}점</strong>입니다!`, 'success', '📊');
+    }
+
+    // =========================================================================
+    // 앱 초기화 (window.onload)
+    // =========================================================================
+    window.onload = function () {
+      initStage1();
+      initStage2();
+      initStage3();
+      initStage4();
+      initStage5();
+      switchStage(1);
+    };
+  </script>
+</body>
+</html>
